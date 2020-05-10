@@ -72,7 +72,6 @@ func SetWorkerSignals(signals ...os.Signal) {
 	gWorkerSignals = signals
 }
 
-
 // getWorker returns global logger worker instance. First call creates and
 // starts logger worker thread
 func getWorker() *worker {

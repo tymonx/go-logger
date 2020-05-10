@@ -25,6 +25,7 @@ import (
 	"text/template"
 	"time"
 )
+
 // These constants define default values for Formatter
 const (
 	DefaultDateFormat = "{year}-{month}-{day} {hour}:{minute}:{second},{milisecond}"
