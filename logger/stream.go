@@ -17,6 +17,7 @@ package logger
 import (
 	"fmt"
 	"io"
+	"sync"
 )
 
 // A Stream represents a log handler object for logging messages using stream
@@ -24,6 +25,7 @@ import (
 type Stream struct {
 	writer    io.WriteCloser
 	formatter *Formatter
+	mutex     sync.RWMutex
 }
 
 // NewStream creates a new Stream log handler object
@@ -42,17 +44,26 @@ func init() {
 
 // GetLevelRange returns minimum and maximum log level values
 func (stream *Stream) GetLevelRange() (min int, max int) {
+	stream.mutex.RLock()
+	defer stream.mutex.RUnlock()
+
 	return TraceLevel, PanicLevel
 }
 
 // SetWriter sets I/O writer object used for writing log messages
 func (stream *Stream) SetWriter(writer io.WriteCloser) *Stream {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+
 	stream.writer = writer
 	return stream
 }
 
 // Emit logs messages from logger using I/O stream
 func (stream *Stream) Emit(record *Record) error {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+
 	if stream.writer != nil {
 		_, err := fmt.Fprintln(stream.writer, stream.formatter.Format(record))
 
@@ -66,6 +77,9 @@ func (stream *Stream) Emit(record *Record) error {
 
 // Close closes I/O stream
 func (stream *Stream) Close() error {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+
 	if stream.writer != nil {
 		err := stream.writer.Close()
 

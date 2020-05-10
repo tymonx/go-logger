@@ -18,14 +18,10 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"sync"
 )
 
 // Named is used as named string placeholders for logger functions
 type Named map[string]interface{}
-
-// gMutex global read/write mutex
-var gMutex = new(sync.RWMutex)
 
 // getHostname returns local hostname
 func getHostname() string {

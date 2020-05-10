@@ -32,6 +32,7 @@ type Worker struct {
 	records   chan *Record
 	signals   chan os.Signal
 	waitGroup sync.WaitGroup
+	mutex     sync.RWMutex
 }
 
 var gWorkerOnce sync.Once
@@ -73,8 +74,8 @@ func GetWorker() *Worker {
 
 // SetQueueLength sets logger worker thread queue length for log messages
 func (worker *Worker) SetQueueLength(length int) *Worker {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	worker.mutex.Lock()
+	defer worker.mutex.Unlock()
 
 	if length <= 0 {
 		length = DefaultWorkerQueueLength
@@ -89,8 +90,8 @@ func (worker *Worker) SetQueueLength(length int) *Worker {
 
 // SetSignals sets signals to stop logger worker thread
 func (worker *Worker) SetSignals(signals ...os.Signal) *Worker {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	worker.mutex.Lock()
+	defer worker.mutex.Unlock()
 
 	signal.Stop(worker.signals)
 

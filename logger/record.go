@@ -67,3 +67,8 @@ func (record *Record) ToJSON() ([]byte, error) {
 func (record *Record) FromJSON(data []byte) error {
 	return json.Unmarshal(data, record)
 }
+
+// GetMessage returns formatted message
+func (record *Record) GetMessage() string {
+	return NewFormatter().FormatMessage(record)
+}

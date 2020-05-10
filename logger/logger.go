@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -71,6 +72,7 @@ type Logger struct {
 	handlers    Handlers
 	idGenerator IDGenerator
 	errorCode   int
+	mutex       sync.RWMutex
 }
 
 // New creates new logger instance with default handlers
@@ -88,8 +90,8 @@ func New() *Logger {
 // SetErrorCode sets error code that is returned during Fatal call.
 // On default it is 1
 func (logger *Logger) SetErrorCode(errorCode int) *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.errorCode = errorCode
 	return logger
@@ -97,16 +99,16 @@ func (logger *Logger) SetErrorCode(errorCode int) *Logger {
 
 // GetErrorCode returns error code
 func (logger *Logger) GetErrorCode() int {
-	gMutex.RLock()
-	defer gMutex.RUnlock()
+	logger.mutex.RLock()
+	defer logger.mutex.RUnlock()
 
 	return logger.errorCode
 }
 
 // SetName sets logger name
 func (logger *Logger) SetName(name string) *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.name = name
 	return logger
@@ -114,16 +116,16 @@ func (logger *Logger) SetName(name string) *Logger {
 
 // GetName returns logger name
 func (logger *Logger) GetName() string {
-	gMutex.RLock()
-	defer gMutex.RUnlock()
+	logger.mutex.RLock()
+	defer logger.mutex.RUnlock()
 
 	return logger.name
 }
 
 // AddHandler sets log handler under provided identifier name
 func (logger *Logger) AddHandler(name string, handler Handler) *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.handlers[name] = handler
 	return logger
@@ -137,8 +139,8 @@ func (logger *Logger) CreateAddHandler(name string) *Logger {
 
 // SetHandlers sets log handlers for logger
 func (logger *Logger) SetHandlers(handlers Handlers) *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.handlers = handlers
 	return logger
@@ -146,8 +148,8 @@ func (logger *Logger) SetHandlers(handlers Handlers) *Logger {
 
 // GetHandler returns added log handler by provided name
 func (logger *Logger) GetHandler(name string) (handler Handler, ok bool) {
-	gMutex.RLock()
-	defer gMutex.RUnlock()
+	logger.mutex.RLock()
+	defer logger.mutex.RUnlock()
 
 	handler, ok = logger.handlers[name]
 	return
@@ -155,16 +157,16 @@ func (logger *Logger) GetHandler(name string) (handler Handler, ok bool) {
 
 // GetHandlers returns all added log handlers
 func (logger *Logger) GetHandlers() Handlers {
-	gMutex.RLock()
-	defer gMutex.RUnlock()
+	logger.mutex.RLock()
+	defer logger.mutex.RUnlock()
 
 	return logger.handlers
 }
 
 // RemoveHandler removes added log handler by provided name
 func (logger *Logger) RemoveHandler(name string) *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	delete(logger.handlers, name)
 	return logger
@@ -172,8 +174,8 @@ func (logger *Logger) RemoveHandler(name string) *Logger {
 
 // RemoveHandlers removes all added log handlers
 func (logger *Logger) RemoveHandlers() *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.handlers = make(Handlers)
 	return logger
@@ -181,8 +183,8 @@ func (logger *Logger) RemoveHandlers() *Logger {
 
 // ResetHandlers sets logger default log handlers
 func (logger *Logger) ResetHandlers() *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.handlers = Handlers{
 		"stdout": NewStdout(),
@@ -194,8 +196,8 @@ func (logger *Logger) ResetHandlers() *Logger {
 
 // Reset resets logger to default state and default log handlers
 func (logger *Logger) Reset() *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.idGenerator = uuid4
 	logger.errorCode = DefaultErrorCode
@@ -210,8 +212,8 @@ func (logger *Logger) Reset() *Logger {
 // SetIDGenerator sets ID generator function that is called by logger to
 // generate ID for created log messages
 func (logger *Logger) SetIDGenerator(idGenerator IDGenerator) *Logger {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	logger.idGenerator = idGenerator
 	return logger
@@ -220,8 +222,8 @@ func (logger *Logger) SetIDGenerator(idGenerator IDGenerator) *Logger {
 // GetIDGenerator returns ID generator function that is called by logger to
 // generate ID for created log messages
 func (logger *Logger) GetIDGenerator() IDGenerator {
-	gMutex.RLock()
-	defer gMutex.RUnlock()
+	logger.mutex.RLock()
+	defer logger.mutex.RUnlock()
 
 	return logger.idGenerator
 }
@@ -354,8 +356,8 @@ func (logger *Logger) emit(record *Record) {
 	record.Address = getAddress()
 	record.Hostname = getHostname()
 
-	gMutex.RLock()
-	defer gMutex.RUnlock()
+	logger.mutex.RLock()
+	defer logger.mutex.RUnlock()
 
 	record.ID = logger.idGenerator()
 	record.Name = logger.name
@@ -379,8 +381,8 @@ func (logger *Logger) emit(record *Record) {
 
 // Close closes all added log handlers
 func (logger *Logger) Close() {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
 
 	for _, handler := range logger.handlers {
 		err := handler.Close()

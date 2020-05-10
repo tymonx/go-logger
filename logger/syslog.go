@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 )
 
 // These constants define default values for syslog
@@ -40,6 +41,7 @@ type Syslog struct {
 	facility   int
 	formatter  *Formatter
 	connection net.Conn
+	mutex      sync.RWMutex
 }
 
 // NewSyslog creates a new Syslog log handler object
@@ -67,15 +69,24 @@ func init() {
 
 // GetLevelRange returns minimum and maximum log level values
 func (syslog *Syslog) GetLevelRange() (min int, max int) {
+	syslog.mutex.RLock()
+	defer syslog.mutex.RUnlock()
+
 	return TraceLevel, PanicLevel
 }
 
 // SetPort sets port number that is used to communicate with Syslog server
 func (syslog *Syslog) SetPort(port int) *Syslog {
-	if port > 0 {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	if port <= 0 {
+		port = DefaultSyslogPort
+	}
+
+	if syslog.port != port {
 		syslog.port = port
-	} else {
-		syslog.port = DefaultSyslogPort
+		syslog.close()
 	}
 
 	return syslog
@@ -83,16 +94,25 @@ func (syslog *Syslog) SetPort(port int) *Syslog {
 
 // GetPort returns port number that is used to communicate with Syslog server
 func (syslog *Syslog) GetPort() int {
+	syslog.mutex.RLock()
+	defer syslog.mutex.RUnlock()
+
 	return syslog.port
 }
 
 // SetNetwork sets network type like "udp" or "tcp" that is used to communicate
 // with Syslog server
 func (syslog *Syslog) SetNetwork(network string) *Syslog {
-	if network != "" {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	if network == "" {
+		network = DefaultSyslogNetwork
+	}
+
+	if syslog.network != network {
 		syslog.network = network
-	} else {
-		syslog.network = DefaultSyslogNetwork
+		syslog.close()
 	}
 
 	return syslog
@@ -101,16 +121,25 @@ func (syslog *Syslog) SetNetwork(network string) *Syslog {
 // GetNetwork returns network type like "udp" or "tcp" that is used to
 // communicate with Syslog server
 func (syslog *Syslog) GetNetwork() string {
+	syslog.mutex.RLock()
+	defer syslog.mutex.RUnlock()
+
 	return syslog.network
 }
 
 // SetAddress sets IP address or hostname that is used to communicate with
 // Syslog server
 func (syslog *Syslog) SetAddress(address string) *Syslog {
-	if address != "" {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	if address == "" {
+		address = DefaultSyslogAddress
+	}
+
+	if syslog.address != address {
 		syslog.address = address
-	} else {
-		syslog.address = DefaultSyslogAddress
+		syslog.close()
 	}
 
 	return syslog
@@ -119,22 +148,22 @@ func (syslog *Syslog) SetAddress(address string) *Syslog {
 // GetAddress returns IP address or hostname that is used to communicate with
 // Syslog server
 func (syslog *Syslog) GetAddress() string {
+	syslog.mutex.RLock()
+	defer syslog.mutex.RUnlock()
+
 	return syslog.network
 }
 
 // Emit logs messages from Logger to Syslog server
 func (syslog *Syslog) Emit(record *Record) error {
-	if syslog.connection == nil {
-		var err error
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
 
-		syslog.connection, err = net.Dial(
-			syslog.network,
-			syslog.address+":"+strconv.Itoa(syslog.port),
-		)
+	if syslog.connection == nil {
+		err := syslog.connect()
 
 		if err != nil {
-			syslog.connection = nil
-			return NewRuntimeError("cannot connect to syslog", err)
+			return err
 		}
 	}
 
@@ -154,6 +183,29 @@ func (syslog *Syslog) Emit(record *Record) error {
 
 // Close closes communication to Syslog server
 func (syslog *Syslog) Close() error {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	return syslog.close()
+}
+
+func (syslog *Syslog) connect() error {
+	var err error
+
+	syslog.connection, err = net.Dial(
+		syslog.network,
+		syslog.address+":"+strconv.Itoa(syslog.port),
+	)
+
+	if err != nil {
+		syslog.connection = nil
+		return NewRuntimeError("cannot connect to syslog", err)
+	}
+
+	return nil
+}
+
+func (syslog *Syslog) close() error {
 	var err error
 
 	if syslog.connection != nil {

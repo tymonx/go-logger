@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 )
@@ -46,6 +47,7 @@ type Formatter struct {
 	timeBuffer    *bytes.Buffer
 	formatBuffer  *bytes.Buffer
 	messageBuffer *bytes.Buffer
+	mutex         sync.RWMutex
 }
 
 // NewFormatter creates a new Formatter object with default format settings
@@ -68,52 +70,106 @@ func NewFormatter() *Formatter {
 // SetPlaceholder sets placeholder string prefix used for automatic and
 // positional placeholders to format log message
 func (formatter *Formatter) SetPlaceholder(placeholder string) *Formatter {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
 	formatter.placeholder = placeholder
+
 	return formatter
 }
 
 // GetPlaceholder returns placeholder string prefix used for automatic and
 // positional placeholders to format log message
 func (formatter *Formatter) GetPlaceholder() string {
+	formatter.mutex.RLock()
+	defer formatter.mutex.RUnlock()
+
 	return formatter.placeholder
 }
 
 // AddFuncs adds template functions to format log message
 func (formatter *Formatter) AddFuncs(funcs FormatterFuncs) *Formatter {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
 	formatter.template.Funcs(template.FuncMap(funcs))
+
 	return formatter
 }
 
 // GetRecord returns assigned log record object to formatter
 func (formatter *Formatter) GetRecord() *Record {
+	formatter.mutex.RLock()
+	defer formatter.mutex.RUnlock()
+
 	return formatter.record
 }
 
 // SetFormat sets format string used for formatting log message
 func (formatter *Formatter) SetFormat(format string) *Formatter {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
 	formatter.format = format
+
 	return formatter
 }
 
 // GetFormat returns format string used for formatting log message
 func (formatter *Formatter) GetFormat() string {
+	formatter.mutex.RLock()
+	defer formatter.mutex.RUnlock()
+
 	return formatter.format
 }
 
 // SetDateFormat sets format string used for formatting date in log message
 func (formatter *Formatter) SetDateFormat(dateFormat string) *Formatter {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
 	formatter.dateFormat = dateFormat
+
 	return formatter
 }
 
 // GetDateFormat returns format string used for formatting date in log message
 func (formatter *Formatter) GetDateFormat() string {
+	formatter.mutex.RLock()
+	defer formatter.mutex.RUnlock()
+
 	return formatter.format
 }
 
 // Format returns formatted log message string based on provided log record
 // object
 func (formatter *Formatter) Format(record *Record) string {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
+	return formatter.formatRecord(record)
+}
+
+// FormatTime returns formatted date string based on provided log record object
+func (formatter *Formatter) FormatTime(record *Record) string {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
+	return formatter.formatTime(record)
+}
+
+// FormatMessage returns formatted user message string based on provided log
+// record object
+func (formatter *Formatter) FormatMessage(record *Record) string {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
+	return formatter.formatMessage(record)
+}
+
+// Format returns formatted log message string based on provided log record
+// object
+func (formatter *Formatter) formatRecord(record *Record) string {
 	formatter.record = record
 
 	return formatter.formatString(
@@ -125,7 +181,7 @@ func (formatter *Formatter) Format(record *Record) string {
 }
 
 // FormatTime returns formatted date string based on provided log record object
-func (formatter *Formatter) FormatTime(record *Record) string {
+func (formatter *Formatter) formatTime(record *Record) string {
 	formatter.record = record
 
 	return formatter.formatString(
@@ -138,7 +194,7 @@ func (formatter *Formatter) FormatTime(record *Record) string {
 
 // FormatMessage returns formatted user message string based on provided log
 // record object
-func (formatter *Formatter) FormatMessage(record *Record) string {
+func (formatter *Formatter) formatMessage(record *Record) string {
 	message := record.Message
 
 	if len(record.Arguments) > 0 {
@@ -148,7 +204,7 @@ func (formatter *Formatter) FormatMessage(record *Record) string {
 
 		funcMap[formatter.placeholder] = formatter.argumentAutomatic()
 
-		for position, argument := range formatter.record.Arguments {
+		for position, argument := range record.Arguments {
 			placeholder := formatter.placeholder + strconv.Itoa(position)
 
 			funcMap[placeholder] = formatter.argumentValue(argument)
@@ -160,9 +216,7 @@ func (formatter *Formatter) FormatMessage(record *Record) string {
 				}
 			default:
 				if reflect.TypeOf(argument).Kind() == reflect.Struct {
-					if object == nil {
-						object = argument
-					}
+					object = argument
 				}
 			}
 		}
@@ -239,10 +293,10 @@ func (formatter *Formatter) setFuncs() {
 			return os.ExpandEnv(name)
 		},
 		"date": func() string {
-			return formatter.FormatTime(formatter.record)
+			return formatter.formatTime(formatter.record)
 		},
 		"message": func() string {
-			return formatter.FormatMessage(formatter.record)
+			return formatter.formatMessage(formatter.record)
 		},
 		"levelValue": func() int {
 			return formatter.record.Level.Value

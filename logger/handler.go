@@ -14,6 +14,10 @@
 
 package logger
 
+import (
+	"sync"
+)
+
 // Handler defines interface for log handlers
 type Handler interface {
 	Emit(record *Record) error
@@ -28,19 +32,20 @@ type Handlers map[string]Handler
 type HandlerConstructor func() Handler
 
 var gHandlerConstructors = make(map[string]HandlerConstructor)
+var gHandlerMutex sync.RWMutex
 
 // RegisterHandler registers log handler under provided name
 func RegisterHandler(name string, constructor HandlerConstructor) {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	gHandlerMutex.Lock()
+	defer gHandlerMutex.Unlock()
 
 	gHandlerConstructors[name] = constructor
 }
 
 // CreateHandler creates registered log handler by provided name
 func CreateHandler(name string) Handler {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	gHandlerMutex.RLock()
+	defer gHandlerMutex.RUnlock()
 
 	return gHandlerConstructors[name]()
 }

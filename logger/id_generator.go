@@ -14,17 +14,23 @@
 
 package logger
 
+import (
+	"sync"
+)
+
 // IDGenerator function type that returns generated ID used in log messages
 type IDGenerator func() string
 
 // gIDGenerators contains all registered ID generators
 var gIDGenerators = make(map[string]IDGenerator)
 
+var gIDGeneratorMutex sync.RWMutex
+
 // RegisterIDGenerator registers ID generator function under provided
 // identifier name
 func RegisterIDGenerator(name string, idGenerator IDGenerator) {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	gIDGeneratorMutex.Lock()
+	defer gIDGeneratorMutex.Unlock()
 
 	gIDGenerators[name] = idGenerator
 }
@@ -32,8 +38,8 @@ func RegisterIDGenerator(name string, idGenerator IDGenerator) {
 // CreateIDGenerator returns registered ID generator function by provided
 // identifier name
 func CreateIDGenerator(name string) IDGenerator {
-	gMutex.Lock()
-	defer gMutex.Unlock()
+	gIDGeneratorMutex.RLock()
+	defer gIDGeneratorMutex.RUnlock()
 
 	return gIDGenerators[name]
 }
