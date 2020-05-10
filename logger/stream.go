@@ -55,7 +55,11 @@ func (stream *Stream) SetWriter(writer io.WriteCloser) *Stream {
 	stream.mutex.Lock()
 	defer stream.mutex.Unlock()
 
-	stream.writer = writer
+	if stream.writer != writer {
+		stream.close()
+		stream.writer = writer
+	}
+
 	return stream
 }
 
@@ -80,6 +84,10 @@ func (stream *Stream) Close() error {
 	stream.mutex.Lock()
 	defer stream.mutex.Unlock()
 
+	return stream.close()
+}
+
+func (stream *Stream) close() error {
 	if stream.writer != nil {
 		err := stream.writer.Close()
 

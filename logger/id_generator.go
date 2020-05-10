@@ -23,7 +23,6 @@ type IDGenerator func() string
 
 // gIDGenerators contains all registered ID generators
 var gIDGenerators = make(map[string]IDGenerator)
-
 var gIDGeneratorMutex sync.RWMutex
 
 // RegisterIDGenerator registers ID generator function under provided

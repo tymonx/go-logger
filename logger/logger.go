@@ -32,19 +32,21 @@ import (
 // functions like for example Debug or Info. It defines also default logger
 // values
 const (
-	TraceLevel    = 0
-	DebugLevel    = 10
-	InfoLevel     = 20
-	NoticeLevel   = 30
-	WarningLevel  = 40
-	ErrorLevel    = 50
-	CriticalLevel = 60
-	AlertLevel    = 70
-	FatalLevel    = 80
-	PanicLevel    = 90
+	OffsetLevel = 10
+
+	TraceLevel    = OffsetLevel
+	DebugLevel    = OffsetLevel + TraceLevel
+	InfoLevel     = OffsetLevel + DebugLevel
+	NoticeLevel   = OffsetLevel + InfoLevel
+	WarningLevel  = OffsetLevel + NoticeLevel
+	ErrorLevel    = OffsetLevel + WarningLevel
+	CriticalLevel = OffsetLevel + ErrorLevel
+	AlertLevel    = OffsetLevel + CriticalLevel
+	FatalLevel    = OffsetLevel + AlertLevel
+	PanicLevel    = OffsetLevel + FatalLevel
 
 	MinimumLevel = TraceLevel
-	MaximumLevel = PanicLevel
+	MaximumLevel = PanicLevel + OffsetLevel
 
 	TraceName    = "trace"
 	DebugName    = "debug"
