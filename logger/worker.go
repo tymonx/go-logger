@@ -21,81 +21,96 @@ import (
 	"syscall"
 )
 
+// These constants define default values for Worker
 const (
-	// DefaultWorkerQueueLength defines default queue length for log messages
-	// between logger and logger worker thread
 	DefaultWorkerQueueLength = 4096
 )
 
-// A worker represents an active logger worker thread. It handles formatting
+// A Worker represents an active logger worker thread. It handles formatting
 // received log messages and I/O operations
-type worker struct {
-	records       chan *Record
-	signals       chan os.Signal
-	waitGroup     sync.WaitGroup
-	isQueueClosed bool
+type Worker struct {
+	records   chan *Record
+	signals   chan os.Signal
+	waitGroup sync.WaitGroup
 }
 
 var gWorkerOnce sync.Once
-var gWorkerInstance *worker
-var gWorkerQueueLength = DefaultWorkerQueueLength
+var gWorkerInstance *Worker
 
-// gWorkerSignals default signals used to stop logger worker thread
-var gWorkerSignals = []os.Signal{
-	os.Kill,
-	os.Interrupt,
-	syscall.SIGHUP,
-	syscall.SIGINT,
-	syscall.SIGQUIT,
-	syscall.SIGTERM,
-}
-
-// SetWorkerQueueLength sets logger worker thread queue length for log messages.
-// This function must be called before using logger
-func SetWorkerQueueLength(length int) {
-	gMutex.Lock()
-	defer gMutex.Unlock()
-
-	if length > 0 {
-		gWorkerQueueLength = length
-	} else {
-		gWorkerQueueLength = DefaultWorkerQueueLength
+// NewWorker creates a new Worker object
+func NewWorker() *Worker {
+	worker := &Worker{
+		records: make(chan *Record, DefaultWorkerQueueLength),
+		signals: make(chan os.Signal, 1),
 	}
+
+	worker.waitGroup.Add(1)
+
+	signal.Notify(
+		worker.signals,
+		os.Kill,
+		os.Interrupt,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+		syscall.SIGTERM,
+	)
+
+	go worker.run()
+
+	return worker
 }
 
-// SetWorkerSignals sets signals to stop logger worker thread. This function
-// must be called before using logger
-func SetWorkerSignals(signals ...os.Signal) {
-	gMutex.Lock()
-	defer gMutex.Unlock()
-
-	gWorkerSignals = signals
-}
-
-// getWorker returns global logger worker instance. First call creates and
+// GetWorker returns logger worker instance. First call to it creates and
 // starts logger worker thread
-func getWorker() *worker {
+func GetWorker() *Worker {
 	gWorkerOnce.Do(func() {
-		gWorkerInstance = &worker{
-			records: make(chan *Record, gWorkerQueueLength),
-			signals: make(chan os.Signal, 1),
-		}
-
-		gWorkerInstance.waitGroup.Add(1)
-
-		if len(gWorkerSignals) > 0 {
-			signal.Notify(gWorkerInstance.signals, gWorkerSignals...)
-		}
-
-		go gWorkerInstance.run()
+		gWorkerInstance = NewWorker()
 	})
 
 	return gWorkerInstance
 }
 
-// run processes all incoming log messages from loggers. It emits received log
+// SetQueueLength sets logger worker thread queue length for log messages
+func (worker *Worker) SetQueueLength(length int) *Worker {
+	gMutex.Lock()
+	defer gMutex.Unlock()
+
+	if length <= 0 {
+		length = DefaultWorkerQueueLength
+	}
+
+	if cap(worker.records) != length {
+		worker.records = make(chan *Record, length)
+	}
+
+	return worker
+}
+
+// SetSignals sets signals to stop logger worker thread
+func (worker *Worker) SetSignals(signals ...os.Signal) *Worker {
+	gMutex.Lock()
+	defer gMutex.Unlock()
+
+	signal.Stop(worker.signals)
+
+	if len(signals) > 0 {
+		signal.Notify(worker.signals, signals...)
+	}
+
+	return worker
+}
+
+// Close stops logger worker thread
+func (worker *Worker) Close() {
+	worker.signals <- os.Interrupt
+	worker.waitGroup.Wait()
+	signal.Stop(worker.signals)
+}
+
+// Run processes all incoming log messages from loggers. It emits received log
 // records to all added log handlers for specific logger
-func (worker *worker) run() {
+func (worker *Worker) run() {
 	var record *Record
 
 	running := true
@@ -120,10 +135,4 @@ func (worker *worker) run() {
 	}
 
 	worker.waitGroup.Done()
-}
-
-// close stops logger worker thread
-func (worker *worker) close() {
-	worker.signals <- os.Interrupt
-	worker.waitGroup.Wait()
 }
