@@ -122,19 +122,8 @@ func (worker *worker) run() {
 	worker.waitGroup.Done()
 }
 
-// closeQueue closes log message queue
-func (worker *worker) closeQueue() {
-	gMutex.Lock()
-	defer gMutex.Unlock()
-
-	if !worker.isQueueClosed {
-		close(worker.records)
-		worker.isQueueClosed = true
-	}
-}
-
 // close stops logger worker thread
 func (worker *worker) close() {
-	worker.closeQueue()
+	worker.signals <- os.Interrupt
 	worker.waitGroup.Wait()
 }

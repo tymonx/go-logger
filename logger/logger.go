@@ -42,6 +42,9 @@ const (
 	FatalLevel    = 80
 	PanicLevel    = 90
 
+	MinimumLevel = TraceLevel
+	MaximumLevel = PanicLevel
+
 	TraceName    = "trace"
 	DebugName    = "debug"
 	InfoName     = "info"
