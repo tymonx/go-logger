@@ -327,7 +327,7 @@ func (logger *Logger) logMessage(level int, levelName string, message string, ar
 	now := time.Now()
 	path, line, function := getPathLineFunction(3)
 
-	getWorker().records <- &Record{
+	GetWorker().records <- &Record{
 		Time:      now,
 		Message:   message,
 		Arguments: arguments,

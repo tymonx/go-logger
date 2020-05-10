@@ -205,6 +205,6 @@ func Log(level int, levelName string, message string, arguments ...interface{}) 
 // Close stops the logger worker thread and it closes all added log
 // handlers
 func Close() {
-	getWorker().close()
+	GetWorker().Close()
 	Get().Close()
 }
