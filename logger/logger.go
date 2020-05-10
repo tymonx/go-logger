@@ -45,8 +45,8 @@ const (
 	FatalLevel    = OffsetLevel + AlertLevel
 	PanicLevel    = OffsetLevel + FatalLevel
 
-	MinimumLevel = TraceLevel
-	MaximumLevel = PanicLevel + OffsetLevel
+	MaximumLevel = int((^uint(0)) >> 1)
+	MinimumLevel = int(^MaximumLevel)
 
 	TraceName    = "trace"
 	DebugName    = "debug"
