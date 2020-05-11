@@ -27,32 +27,36 @@ const (
 	DefaultSyslogVersion  = 1
 	DefaultSyslogNetwork  = "tcp"
 	DefaultSyslogAddress  = "localhost"
-	DefaultSyslogFormat   = "{syslogPriority}{syslogVersion} {iso8601} {address} {name} {pid} {id} - {file}:{line}:{function}(): {message}"
+	DefaultSyslogFormat   = "<{syslogPriority}>{syslogVersion} {iso8601} {address} {name} {pid} {id} - {file}:{line}:{function}(): {message}"
 	DefaultSyslogFacility = 1
 )
 
 // A Syslog represents a log handler object for logging messages to running
 // Syslog server
 type Syslog struct {
-	port       int
-	version    int
-	network    string
-	address    string
-	facility   int
-	formatter  *Formatter
-	connection net.Conn
-	mutex      sync.RWMutex
+	port         int
+	mutex        sync.RWMutex
+	version      int
+	network      string
+	address      string
+	facility     int
+	formatter    *Formatter
+	connection   net.Conn
+	minimumLevel int
+	maximumLevel int
 }
 
 // NewSyslog creates a new Syslog log handler object
 func NewSyslog() *Syslog {
 	syslog := &Syslog{
-		port:      DefaultSyslogPort,
-		version:   DefaultSyslogVersion,
-		network:   DefaultSyslogNetwork,
-		address:   DefaultSyslogAddress,
-		facility:  DefaultSyslogFacility,
-		formatter: NewFormatter().SetFormat(DefaultSyslogFormat),
+		port:         DefaultSyslogPort,
+		version:      DefaultSyslogVersion,
+		network:      DefaultSyslogNetwork,
+		address:      DefaultSyslogAddress,
+		facility:     DefaultSyslogFacility,
+		formatter:    NewFormatter().SetFormat(DefaultSyslogFormat),
+		minimumLevel: MinimumLevel,
+		maximumLevel: MaximumLevel,
 	}
 
 	syslog.setFormatterFuncs()
@@ -67,12 +71,77 @@ func init() {
 	})
 }
 
+// SetFormatter sets Formatter
+func (syslog *Syslog) SetFormatter(formatter *Formatter) Handler {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	syslog.formatter = formatter
+
+	return syslog
+}
+
+// GetFormatter returns Formatter
+func (syslog *Syslog) GetFormatter() *Formatter {
+	syslog.mutex.RLock()
+	defer syslog.mutex.RUnlock()
+
+	return syslog.formatter
+}
+
+// SetMinimumLevel sets minimum log level
+func (syslog *Syslog) SetMinimumLevel(level int) Handler {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	syslog.minimumLevel = level
+
+	return syslog
+}
+
+// GetMinimumLevel returns minimum log level
+func (syslog *Syslog) GetMinimumLevel() int {
+	syslog.mutex.RLock()
+	defer syslog.mutex.RUnlock()
+
+	return syslog.minimumLevel
+}
+
+// SetMaximumLevel sets maximum log level
+func (syslog *Syslog) SetMaximumLevel(level int) Handler {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	syslog.maximumLevel = level
+
+	return syslog
+}
+
+// GetMaximumLevel returns maximum log level
+func (syslog *Syslog) GetMaximumLevel() int {
+	syslog.mutex.RLock()
+	defer syslog.mutex.RUnlock()
+
+	return syslog.maximumLevel
+}
+
+// SetLevelRange sets minimum and maximum log level values
+func (syslog *Syslog) SetLevelRange(min int, max int) Handler {
+	syslog.mutex.Lock()
+	defer syslog.mutex.Unlock()
+
+	syslog.minimumLevel = min
+	syslog.maximumLevel = max
+
+	return syslog
+}
+
 // GetLevelRange returns minimum and maximum log level values
 func (syslog *Syslog) GetLevelRange() (min int, max int) {
 	syslog.mutex.RLock()
 	defer syslog.mutex.RUnlock()
 
-	return TraceLevel, PanicLevel
+	return syslog.minimumLevel, syslog.maximumLevel
 }
 
 // SetPort sets port number that is used to communicate with Syslog server
@@ -228,7 +297,7 @@ func (syslog *Syslog) setFormatterFuncs() {
 		"syslogVersion": func() int {
 			return syslog.version
 		},
-		"syslogPriority": func() string {
+		"syslogPriority": func() int {
 			severities := [8]int{
 				FatalLevel,
 				AlertLevel,
@@ -249,9 +318,7 @@ func (syslog *Syslog) setFormatterFuncs() {
 				}
 			}
 
-			priority := ((0x1F & syslog.facility) << 3) | (0x07 & severity)
-
-			return fmt.Sprintf("<%d>", priority)
+			return ((0x1F & syslog.facility) << 3) | (0x07 & severity)
 		},
 	})
 }

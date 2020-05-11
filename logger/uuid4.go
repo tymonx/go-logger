@@ -18,16 +18,32 @@ import (
 	"github.com/google/uuid"
 )
 
-func uuid4() string {
-	result, err := uuid.NewRandom()
+// An UUID4 represents uui4 generator
+type UUID4 struct{}
 
-	if err != nil {
-		NewRuntimeError("cannot generate UUID4", err).Print()
-	}
-
-	return result.String()
+// NewUUID4 create a new UUID4 object
+func NewUUID4() *UUID4 {
+	return &UUID4{}
 }
 
 func init() {
-	RegisterIDGenerator("uuid4", uuid4)
+	RegisterIDGenerator("uuid4", func() IDGenerator {
+		return NewUUID4()
+	})
+}
+
+// Generate generates new UUID4
+func (uuid4 *UUID4) Generate() (id interface{}, err error) {
+	var result uuid.UUID
+
+	result, err = uuid.NewRandom()
+
+	if err == nil {
+		id = result.String()
+	} else {
+		id = ""
+		err = NewRuntimeError("cannot generate UUID4", err)
+	}
+
+	return
 }

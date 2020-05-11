@@ -29,21 +29,25 @@ const (
 
 // A File represents a log handler object for logging messages to file
 type File struct {
-	name      string
-	mode      os.FileMode
-	flags     int
-	handler   *os.File
-	formatter *Formatter
-	mutex     sync.RWMutex
+	name         string
+	mode         os.FileMode
+	flags        int
+	mutex        sync.RWMutex
+	handler      *os.File
+	formatter    *Formatter
+	minimumLevel int
+	maximumLevel int
 }
 
 // NewFile creates a new File log handler object
 func NewFile() *File {
 	return &File{
-		name:      DefaultFileName,
-		mode:      DefaultFileMode,
-		flags:     DefaultFileFlags,
-		formatter: NewFormatter(),
+		name:         DefaultFileName,
+		mode:         DefaultFileMode,
+		flags:        DefaultFileFlags,
+		formatter:    NewFormatter(),
+		minimumLevel: MinimumLevel,
+		maximumLevel: MaximumLevel,
 	}
 }
 
@@ -54,12 +58,77 @@ func init() {
 	})
 }
 
+// SetFormatter sets Formatter
+func (file *File) SetFormatter(formatter *Formatter) Handler {
+	file.mutex.Lock()
+	defer file.mutex.Unlock()
+
+	file.formatter = formatter
+
+	return file
+}
+
+// GetFormatter returns Formatter
+func (file *File) GetFormatter() *Formatter {
+	file.mutex.RLock()
+	defer file.mutex.RUnlock()
+
+	return file.formatter
+}
+
+// SetMinimumLevel sets minimum log level
+func (file *File) SetMinimumLevel(level int) Handler {
+	file.mutex.Lock()
+	defer file.mutex.Unlock()
+
+	file.minimumLevel = level
+
+	return file
+}
+
+// GetMinimumLevel returns minimum log level
+func (file *File) GetMinimumLevel() int {
+	file.mutex.RLock()
+	defer file.mutex.RUnlock()
+
+	return file.minimumLevel
+}
+
+// SetMaximumLevel sets maximum log level
+func (file *File) SetMaximumLevel(level int) Handler {
+	file.mutex.Lock()
+	defer file.mutex.Unlock()
+
+	file.maximumLevel = level
+
+	return file
+}
+
+// GetMaximumLevel returns maximum log level
+func (file *File) GetMaximumLevel() int {
+	file.mutex.RLock()
+	defer file.mutex.RUnlock()
+
+	return file.maximumLevel
+}
+
+// SetLevelRange sets minimum and maximum log level values
+func (file *File) SetLevelRange(min int, max int) Handler {
+	file.mutex.Lock()
+	defer file.mutex.Unlock()
+
+	file.minimumLevel = min
+	file.maximumLevel = max
+
+	return file
+}
+
 // GetLevelRange returns minimum and maximum log level values
 func (file *File) GetLevelRange() (min int, max int) {
 	file.mutex.RLock()
 	defer file.mutex.RUnlock()
 
-	return TraceLevel, PanicLevel
+	return file.minimumLevel, file.maximumLevel
 }
 
 // SetName sets file name used for log messages

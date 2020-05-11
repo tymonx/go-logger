@@ -23,15 +23,19 @@ import (
 // A Stream represents a log handler object for logging messages using stream
 // object
 type Stream struct {
-	writer    io.WriteCloser
-	formatter *Formatter
-	mutex     sync.RWMutex
+	writer       io.WriteCloser
+	formatter    *Formatter
+	mutex        sync.RWMutex
+	minimumLevel int
+	maximumLevel int
 }
 
 // NewStream creates a new Stream log handler object
 func NewStream() *Stream {
 	return &Stream{
-		formatter: NewFormatter(),
+		formatter:    NewFormatter(),
+		minimumLevel: MinimumLevel,
+		maximumLevel: MaximumLevel,
 	}
 }
 
@@ -42,12 +46,77 @@ func init() {
 	})
 }
 
+// SetFormatter sets Formatter
+func (stream *Stream) SetFormatter(formatter *Formatter) Handler {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+
+	stream.formatter = formatter
+
+	return stream
+}
+
+// GetFormatter returns Formatter
+func (stream *Stream) GetFormatter() *Formatter {
+	stream.mutex.RLock()
+	defer stream.mutex.RUnlock()
+
+	return stream.formatter
+}
+
+// SetMinimumLevel sets minimum log level
+func (stream *Stream) SetMinimumLevel(level int) Handler {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+
+	stream.minimumLevel = level
+
+	return stream
+}
+
+// GetMinimumLevel returns minimum log level
+func (stream *Stream) GetMinimumLevel() int {
+	stream.mutex.RLock()
+	defer stream.mutex.RUnlock()
+
+	return stream.minimumLevel
+}
+
+// SetMaximumLevel sets maximum log level
+func (stream *Stream) SetMaximumLevel(level int) Handler {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+
+	stream.maximumLevel = level
+
+	return stream
+}
+
+// GetMaximumLevel returns maximum log level
+func (stream *Stream) GetMaximumLevel() int {
+	stream.mutex.RLock()
+	defer stream.mutex.RUnlock()
+
+	return stream.maximumLevel
+}
+
+// SetLevelRange sets minimum and maximum log level values
+func (stream *Stream) SetLevelRange(min int, max int) Handler {
+	stream.mutex.Lock()
+	defer stream.mutex.Unlock()
+
+	stream.minimumLevel = min
+	stream.maximumLevel = max
+
+	return stream
+}
+
 // GetLevelRange returns minimum and maximum log level values
 func (stream *Stream) GetLevelRange() (min int, max int) {
 	stream.mutex.RLock()
 	defer stream.mutex.RUnlock()
 
-	return TraceLevel, PanicLevel
+	return stream.minimumLevel, stream.maximumLevel
 }
 
 // SetWriter sets I/O writer object used for writing log messages

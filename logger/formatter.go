@@ -259,22 +259,24 @@ func (formatter *Formatter) argumentAutomatic() func() interface{} {
 
 // formatString returns formatted string
 func (formatter *Formatter) formatString(template *template.Template, buffer *bytes.Buffer, format string, object interface{}) string {
-	var err error
-
-	template, err = template.Parse(format)
-
-	if err != nil {
-		NewRuntimeError("cannot parse text template", err).Print()
-		return format
-	}
-
 	buffer.Reset()
 
-	err = template.Execute(buffer, object)
+	if format != "" {
+		var err error
 
-	if err != nil {
-		NewRuntimeError("cannot execute text template", err).Print()
-		return format
+		template, err = template.Parse(format)
+
+		if err != nil {
+			NewRuntimeError("cannot parse text template", err).Print()
+			return format
+		}
+
+		err = template.Execute(buffer, object)
+
+		if err != nil {
+			NewRuntimeError("cannot execute text template", err).Print()
+			return format
+		}
 	}
 
 	return buffer.String()
@@ -313,7 +315,7 @@ func (formatter *Formatter) setFuncs() {
 		"iso8601": func() string {
 			return formatter.record.Time.Format(time.RFC3339)
 		},
-		"id": func() string {
+		"id": func() interface{} {
 			return formatter.record.ID
 		},
 		"gid": func() int {

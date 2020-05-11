@@ -18,27 +18,38 @@ import (
 	"sync"
 )
 
-// IDGenerator function type that returns generated ID used in log messages
-type IDGenerator func() string
+// IDGenerator type that returns generated ID used in log messages
+type IDGenerator interface {
+	Generate() (id interface{}, err error)
+}
+
+// IDGeneratorConstructor defines ID generator constructor
+type IDGeneratorConstructor func() IDGenerator
 
 // gIDGenerators contains all registered ID generators
-var gIDGenerators = make(map[string]IDGenerator)
+var gIDGeneratorConstructors = make(map[string]IDGeneratorConstructor)
 var gIDGeneratorMutex sync.RWMutex
 
-// RegisterIDGenerator registers ID generator function under provided
-// identifier name
-func RegisterIDGenerator(name string, idGenerator IDGenerator) {
+// RegisterIDGenerator registers ID generator under provided identifier name
+func RegisterIDGenerator(name string, constructor IDGeneratorConstructor) {
 	gIDGeneratorMutex.Lock()
 	defer gIDGeneratorMutex.Unlock()
 
-	gIDGenerators[name] = idGenerator
+	gIDGeneratorConstructors[name] = constructor
 }
 
-// CreateIDGenerator returns registered ID generator function by provided
-// identifier name
-func CreateIDGenerator(name string) IDGenerator {
+// CreateIDGenerator returns registered ID generator by provided identifier name
+func CreateIDGenerator(name string) (idGenerator IDGenerator, err error) {
 	gIDGeneratorMutex.RLock()
 	defer gIDGeneratorMutex.RUnlock()
 
-	return gIDGenerators[name]
+	constructor, ok := gIDGeneratorConstructors[name]
+
+	if ok {
+		idGenerator = constructor()
+	} else {
+		err = NewRuntimeError("cannot create ID generator "+name, nil)
+	}
+
+	return
 }

@@ -59,7 +59,7 @@ func AddHandler(name string, handler Handler) *Logger {
 
 // CreateAddHandler it creates registered log handler by provided name and it
 // sets for logger
-func CreateAddHandler(name string) *Logger {
+func CreateAddHandler(name string) error {
 	return Get().CreateAddHandler(name)
 }
 
@@ -112,7 +112,7 @@ func GetIDGenerator() IDGenerator {
 
 // CreateSetIDGenerator it creates registered ID generator function by provided
 // name and it sets for logger
-func CreateSetIDGenerator(name string) *Logger {
+func CreateSetIDGenerator(name string) error {
 	return Get().CreateSetIDGenerator(name)
 }
 
@@ -202,9 +202,12 @@ func Log(level int, levelName string, message string, arguments ...interface{}) 
 	Get().logMessage(level, levelName, message, arguments...)
 }
 
-// Close stops the logger worker thread and it closes all added log
-// handlers
-func Close() {
-	GetWorker().Close()
-	Get().Close()
+// Flush flushes all log messages
+func Flush() *Logger {
+	return Get().Flush()
+}
+
+// Close closes all added log handlers
+func Close() error {
+	return Get().Close()
 }

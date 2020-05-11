@@ -32,7 +32,38 @@ func compare(test *testing.T, captured interface{}, expected interface{}) {
 }
 
 func Example() {
-	Info("Hello from logger!")
+	logger := New()
+
+	for _, handler := range logger.GetHandlers() {
+		handler.GetFormatter().SetDateFormat("2020")
+	}
+
+	logger.Info("Hello from logger!")
+	logger.Info("Automatic placeholders {p} {p} {p}", 1, 2, 3)
+	logger.Info("Positional placeholders {p2} {p1} {p0}", 1, 2, 3)
+
+	logger.Info("Named placeholders {z} {y} {x}", Named{
+		"x": 1,
+		"y": 2,
+		"z": 3,
+	})
+
+	logger.Info("Object placeholders {.Z} {.Y} {.X}", struct {
+		X, Y, Z int
+	}{
+		X: 1,
+		Y: 2,
+		Z: 3,
+	})
+
+	logger.Flush()
+
+	// Output:
+	// 2020 - Info     - logger_test.go:41:logger.Example(): Hello from logger!
+	// 2020 - Info     - logger_test.go:42:logger.Example(): Automatic placeholders 1 2 3
+	// 2020 - Info     - logger_test.go:43:logger.Example(): Positional placeholders 3 2 1
+	// 2020 - Info     - logger_test.go:45:logger.Example(): Named placeholders 3 2 1
+	// 2020 - Info     - logger_test.go:51:logger.Example(): Object placeholders 3 2 1
 }
 
 func TestMain(main *testing.M) {

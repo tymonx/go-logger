@@ -17,18 +17,24 @@ package logger
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 // A Stderr represents a log handler object for logging message to error
 // output
 type Stderr struct {
-	formatter *Formatter
+	mutex        sync.RWMutex
+	formatter    *Formatter
+	minimumLevel int
+	maximumLevel int
 }
 
 // NewStderr created a new Stderr log handler object
 func NewStderr() *Stderr {
 	return &Stderr{
-		formatter: NewFormatter(),
+		formatter:    NewFormatter(),
+		minimumLevel: ErrorLevel,
+		maximumLevel: MaximumLevel,
 	}
 }
 
@@ -39,9 +45,77 @@ func init() {
 	})
 }
 
+// SetFormatter sets Formatter
+func (stderr *Stderr) SetFormatter(formatter *Formatter) Handler {
+	stderr.mutex.Lock()
+	defer stderr.mutex.Unlock()
+
+	stderr.formatter = formatter
+
+	return stderr
+}
+
+// GetFormatter returns Formatter
+func (stderr *Stderr) GetFormatter() *Formatter {
+	stderr.mutex.RLock()
+	defer stderr.mutex.RUnlock()
+
+	return stderr.formatter
+}
+
+// SetMinimumLevel sets minimum log level
+func (stderr *Stderr) SetMinimumLevel(level int) Handler {
+	stderr.mutex.Lock()
+	defer stderr.mutex.Unlock()
+
+	stderr.minimumLevel = level
+
+	return stderr
+}
+
+// GetMinimumLevel returns minimum log level
+func (stderr *Stderr) GetMinimumLevel() int {
+	stderr.mutex.RLock()
+	defer stderr.mutex.RUnlock()
+
+	return stderr.minimumLevel
+}
+
+// SetMaximumLevel sets maximum log level
+func (stderr *Stderr) SetMaximumLevel(level int) Handler {
+	stderr.mutex.Lock()
+	defer stderr.mutex.Unlock()
+
+	stderr.maximumLevel = level
+
+	return stderr
+}
+
+// GetMaximumLevel returns maximum log level
+func (stderr *Stderr) GetMaximumLevel() int {
+	stderr.mutex.RLock()
+	defer stderr.mutex.RUnlock()
+
+	return stderr.maximumLevel
+}
+
+// SetLevelRange sets minimum and maximum log level values
+func (stderr *Stderr) SetLevelRange(min int, max int) Handler {
+	stderr.mutex.Lock()
+	defer stderr.mutex.Unlock()
+
+	stderr.minimumLevel = min
+	stderr.maximumLevel = max
+
+	return stderr
+}
+
 // GetLevelRange returns minimum and maximum log level values
 func (stderr *Stderr) GetLevelRange() (min int, max int) {
-	return ErrorLevel, PanicLevel
+	stderr.mutex.RLock()
+	defer stderr.mutex.RUnlock()
+
+	return stderr.minimumLevel, stderr.maximumLevel
 }
 
 // Emit logs messages from logger to error output

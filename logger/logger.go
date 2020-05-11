@@ -34,7 +34,7 @@ import (
 const (
 	OffsetLevel = 10
 
-	TraceLevel    = OffsetLevel
+	TraceLevel    = 0
 	DebugLevel    = OffsetLevel + TraceLevel
 	InfoLevel     = OffsetLevel + DebugLevel
 	NoticeLevel   = OffsetLevel + InfoLevel
@@ -45,8 +45,8 @@ const (
 	FatalLevel    = OffsetLevel + AlertLevel
 	PanicLevel    = OffsetLevel + FatalLevel
 
-	MaximumLevel = int((^uint(0)) >> 1)
-	MinimumLevel = int(^MaximumLevel)
+	MinimumLevel = TraceLevel
+	MaximumLevel = PanicLevel
 
 	TraceName    = "trace"
 	DebugName    = "debug"
@@ -85,7 +85,7 @@ func New() *Logger {
 			"stderr": NewStderr(),
 		},
 		errorCode:   DefaultErrorCode,
-		idGenerator: uuid4,
+		idGenerator: NewUUID4(),
 	}
 }
 
@@ -135,8 +135,14 @@ func (logger *Logger) AddHandler(name string, handler Handler) *Logger {
 
 // CreateAddHandler it creates registered log handler by provided name and it
 // sets for logger
-func (logger *Logger) CreateAddHandler(name string) *Logger {
-	return logger.AddHandler(name, CreateHandler(name))
+func (logger *Logger) CreateAddHandler(name string) error {
+	handler, err := CreateHandler(name)
+
+	if err == nil {
+		logger.AddHandler(name, handler)
+	}
+
+	return err
 }
 
 // SetHandlers sets log handlers for logger
@@ -201,7 +207,7 @@ func (logger *Logger) Reset() *Logger {
 	logger.mutex.Lock()
 	defer logger.mutex.Unlock()
 
-	logger.idGenerator = uuid4
+	logger.idGenerator = NewUUID4()
 	logger.errorCode = DefaultErrorCode
 	logger.handlers = Handlers{
 		"stdout": NewStdout(),
@@ -232,9 +238,14 @@ func (logger *Logger) GetIDGenerator() IDGenerator {
 
 // CreateSetIDGenerator it creates registered ID generator function by provided
 // name and it sets for logger
-func (logger *Logger) CreateSetIDGenerator(name string) *Logger {
-	logger.SetIDGenerator(CreateIDGenerator(name))
-	return logger
+func (logger *Logger) CreateSetIDGenerator(name string) error {
+	idGenerator, err := CreateIDGenerator(name)
+
+	if err == nil {
+		logger.SetIDGenerator(idGenerator)
+	}
+
+	return err
 }
 
 // Trace logs finer-grained informational messages than the Debug. It creates
@@ -323,6 +334,34 @@ func (logger *Logger) Log(level int, levelName string, message string, arguments
 	logger.logMessage(level, levelName, message, arguments...)
 }
 
+// Flush flushes all log messages
+func (logger *Logger) Flush() *Logger {
+	GetWorker().Flush()
+
+	return logger
+}
+
+// Close closes all added log handlers
+func (logger *Logger) Close() error {
+	GetWorker().Flush()
+
+	logger.mutex.Lock()
+	defer logger.mutex.Unlock()
+
+	var err error
+
+	for _, handler := range logger.handlers {
+		handlerError := handler.Close()
+
+		if handlerError != nil {
+			err = NewRuntimeError("cannot close log handler", nil)
+			fmt.Fprintln(os.Stderr, handlerError)
+		}
+	}
+
+	return err
+}
+
 // logMessage logs message with defined log level value and name. It creates and
 // sends lightweight not formatted log messages to separate running logger
 // thread for further formatting and I/O handling from different added log
@@ -351,6 +390,8 @@ func (logger *Logger) logMessage(level int, levelName string, message string, ar
 // emit prepares provided log record and it dispatches to all added log
 // handlers for further formatting and specific I/O implementation operations
 func (logger *Logger) emit(record *Record) {
+	var err error
+
 	record.Type = DefaultTypeName
 	record.File.Name = filepath.Base(record.File.Path)
 	record.File.Function = filepath.Base(record.File.Function)
@@ -361,8 +402,12 @@ func (logger *Logger) emit(record *Record) {
 	logger.mutex.RLock()
 	defer logger.mutex.RUnlock()
 
-	record.ID = logger.idGenerator()
 	record.Name = logger.name
+	record.ID, err = logger.idGenerator.Generate()
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
 
 	if record.Name == "" {
 		record.Name = filepath.Base(os.Args[0])
@@ -372,25 +417,11 @@ func (logger *Logger) emit(record *Record) {
 		min, max := handler.GetLevelRange()
 
 		if (record.Level.Value >= min) && (record.Level.Value <= max) {
-			err := handler.Emit(record)
+			err = handler.Emit(record)
 
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 			}
-		}
-	}
-}
-
-// Close closes all added log handlers
-func (logger *Logger) Close() {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
-
-	for _, handler := range logger.handlers {
-		err := handler.Close()
-
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
 		}
 	}
 }

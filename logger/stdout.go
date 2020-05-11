@@ -17,18 +17,24 @@ package logger
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 // A Stdout represents a log handler object for logging message to standard
 // output
 type Stdout struct {
-	formatter *Formatter
+	mutex        sync.RWMutex
+	formatter    *Formatter
+	minimumLevel int
+	maximumLevel int
 }
 
 // NewStdout created a new Stdout log handler object
 func NewStdout() *Stdout {
 	return &Stdout{
-		formatter: NewFormatter(),
+		formatter:    NewFormatter(),
+		minimumLevel: MinimumLevel,
+		maximumLevel: WarningLevel,
 	}
 }
 
@@ -39,9 +45,77 @@ func init() {
 	})
 }
 
+// SetFormatter sets Formatter
+func (stdout *Stdout) SetFormatter(formatter *Formatter) Handler {
+	stdout.mutex.Lock()
+	defer stdout.mutex.Unlock()
+
+	stdout.formatter = formatter
+
+	return stdout
+}
+
+// GetFormatter returns Formatter
+func (stdout *Stdout) GetFormatter() *Formatter {
+	stdout.mutex.RLock()
+	defer stdout.mutex.RUnlock()
+
+	return stdout.formatter
+}
+
+// SetMinimumLevel sets minimum log level
+func (stdout *Stdout) SetMinimumLevel(level int) Handler {
+	stdout.mutex.Lock()
+	defer stdout.mutex.Unlock()
+
+	stdout.minimumLevel = level
+
+	return stdout
+}
+
+// GetMinimumLevel returns minimum log level
+func (stdout *Stdout) GetMinimumLevel() int {
+	stdout.mutex.RLock()
+	defer stdout.mutex.RUnlock()
+
+	return stdout.minimumLevel
+}
+
+// SetMaximumLevel sets maximum log level
+func (stdout *Stdout) SetMaximumLevel(level int) Handler {
+	stdout.mutex.Lock()
+	defer stdout.mutex.Unlock()
+
+	stdout.maximumLevel = level
+
+	return stdout
+}
+
+// GetMaximumLevel returns maximum log level
+func (stdout *Stdout) GetMaximumLevel() int {
+	stdout.mutex.RLock()
+	defer stdout.mutex.RUnlock()
+
+	return stdout.maximumLevel
+}
+
+// SetLevelRange sets minimum and maximum log level values
+func (stdout *Stdout) SetLevelRange(min int, max int) Handler {
+	stdout.mutex.Lock()
+	defer stdout.mutex.Unlock()
+
+	stdout.minimumLevel = min
+	stdout.maximumLevel = max
+
+	return stdout
+}
+
 // GetLevelRange returns minimum and maximum log level values
 func (stdout *Stdout) GetLevelRange() (min int, max int) {
-	return TraceLevel, WarningLevel
+	stdout.mutex.RLock()
+	defer stdout.mutex.RUnlock()
+
+	return stdout.minimumLevel, stdout.maximumLevel
 }
 
 // Emit logs messages from logger to standard output

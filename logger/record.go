@@ -16,6 +16,7 @@ package logger
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 )
 
@@ -44,18 +45,47 @@ type Source struct {
 // Record defines log record fields created by Logger and it is used by
 // Formatter to format log message based on these fields
 type Record struct {
-	ID        string    `json:"id"`
-	Type      string    `json:"type"`
-	Name      string    `json:"name"`
-	Time      time.Time `json:"-"`
-	Level     Level     `json:"level"`
-	Address   string    `json:"address"`
-	Hostname  string    `json:"hostname"`
-	Message   string    `json:"message"`
-	File      Source    `json:"file"`
-	Arguments Arguments `json:"arguments"`
-	Timestamp Timestamp `json:"timestamp"`
+	ID        interface{} `json:"id"`
+	Type      string      `json:"type"`
+	Name      string      `json:"name"`
+	Time      time.Time   `json:"-"`
+	Level     Level       `json:"level"`
+	Address   string      `json:"address"`
+	Hostname  string      `json:"hostname"`
+	Message   string      `json:"message"`
+	File      Source      `json:"file"`
+	Arguments Arguments   `json:"arguments"`
+	Timestamp Timestamp   `json:"timestamp"`
 	logger    *Logger
+}
+
+// GetIDNumber returns ID as number
+func (record *Record) GetIDNumber() (id int, err error) {
+	switch record.ID.(type) {
+	case string:
+		id, err = strconv.Atoi(record.ID.(string))
+		err = NewRuntimeError("invalid ID conversion", err)
+	case int:
+		id = record.ID.(int)
+	default:
+		err = NewRuntimeError("invalid ID type", nil)
+	}
+
+	return
+}
+
+// GetIDString returns ID as string
+func (record *Record) GetIDString() (id string, err error) {
+	switch record.ID.(type) {
+	case string:
+		id = record.ID.(string)
+	case int:
+		id = strconv.Itoa(record.ID.(int))
+	default:
+		err = NewRuntimeError("invalid ID type", nil)
+	}
+
+	return
 }
 
 // ToJSON packs data to JSON

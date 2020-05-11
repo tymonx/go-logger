@@ -20,8 +20,24 @@ import (
 
 // Handler defines interface for log handlers
 type Handler interface {
-	Emit(record *Record) error
+	SetFormatter(formatter *Formatter) Handler
+
+	GetFormatter() *Formatter
+
+	SetMinimumLevel(level int) Handler
+
+	GetMinimumLevel() int
+
+	SetMaximumLevel(level int) Handler
+
+	GetMaximumLevel() int
+
+	SetLevelRange(min int, max int) Handler
+
 	GetLevelRange() (min int, max int)
+
+	Emit(record *Record) error
+
 	Close() error
 }
 
@@ -43,9 +59,17 @@ func RegisterHandler(name string, constructor HandlerConstructor) {
 }
 
 // CreateHandler creates registered log handler by provided name
-func CreateHandler(name string) Handler {
+func CreateHandler(name string) (handler Handler, err error) {
 	gHandlerMutex.RLock()
 	defer gHandlerMutex.RUnlock()
 
-	return gHandlerConstructors[name]()
+	constructor, ok := gHandlerConstructors[name]
+
+	if ok {
+		handler = constructor()
+	} else {
+		err = NewRuntimeError("cannot create log handler "+name, nil)
+	}
+
+	return
 }
