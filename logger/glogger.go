@@ -69,7 +69,7 @@ func SetHandlers(handlers Handlers) *Logger {
 }
 
 // GetHandler returns added log handler by provided name
-func GetHandler(name string) (handler Handler, ok bool) {
+func GetHandler(name string) (Handler, error) {
 	return Get().GetHandler(name)
 }
 

@@ -33,17 +33,16 @@ func init() {
 }
 
 // Generate generates new UUID4
-func (uuid4 *UUID4) Generate() (id interface{}, err error) {
-	var result uuid.UUID
+func (uuid4 *UUID4) Generate() (interface{}, error) {
+	var id string
 
-	result, err = uuid.NewRandom()
+	result, err := uuid.NewRandom()
 
 	if err == nil {
 		id = result.String()
 	} else {
-		id = ""
-		err = NewRuntimeError("cannot generate UUID4", err)
+		return "", NewRuntimeError("cannot generate UUID4", err)
 	}
 
-	return
+	return id, nil
 }

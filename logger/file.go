@@ -37,6 +37,7 @@ type File struct {
 	formatter    *Formatter
 	minimumLevel int
 	maximumLevel int
+	reopen       bool
 }
 
 // NewFile creates a new File log handler object
@@ -138,7 +139,7 @@ func (file *File) SetName(name string) *File {
 
 	if file.name != name {
 		file.name = name
-		file.close()
+		file.reopen = true
 	}
 
 	return file
@@ -159,7 +160,7 @@ func (file *File) SetFlags(flags int) *File {
 
 	if file.flags != flags {
 		file.flags = flags
-		file.close()
+		file.reopen = true
 	}
 
 	return file
@@ -180,7 +181,7 @@ func (file *File) SetMode(mode os.FileMode) *File {
 
 	if file.mode != mode {
 		file.mode = mode
-		file.close()
+		file.reopen = true
 	}
 
 	return file
@@ -199,19 +200,35 @@ func (file *File) Emit(record *Record) error {
 	file.mutex.Lock()
 	defer file.mutex.Unlock()
 
+	if file.reopen {
+		err := file.close()
+
+		if err != nil {
+			return NewRuntimeError("cannot close file "+file.name, err)
+		}
+
+		file.reopen = false
+	}
+
 	if file.handler == nil {
 		err := file.open()
 
 		if err != nil {
-			return err
+			return NewRuntimeError("cannot open file "+file.name, err)
 		}
 	}
 
 	if file.handler != nil {
-		_, err := fmt.Fprintln(file.handler, file.formatter.Format(record))
+		message, err := file.formatter.Format(record)
 
 		if err != nil {
-			return NewRuntimeError("cannot append file", err)
+			return NewRuntimeError("cannot format record", err)
+		}
+
+		_, err = fmt.Fprintln(file.handler, message)
+
+		if err != nil {
+			return NewRuntimeError("cannot append file "+file.name, err)
 		}
 	}
 
@@ -223,7 +240,13 @@ func (file *File) Close() error {
 	file.mutex.Lock()
 	defer file.mutex.Unlock()
 
-	return file.close()
+	err := file.close()
+
+	if err != nil {
+		return NewRuntimeError("cannot close file "+file.name, err)
+	}
+
+	return nil
 }
 
 func (file *File) open() error {
@@ -235,24 +258,16 @@ func (file *File) open() error {
 		file.mode,
 	)
 
-	if err != nil {
-		file.handler = nil
-		return NewRuntimeError("cannot open file", err)
-	}
-
-	return nil
+	return err
 }
 
 func (file *File) close() error {
+	var err error
+
 	if file.handler != nil {
-		err := file.handler.Close()
-
+		err = file.handler.Close()
 		file.handler = nil
-
-		if err != nil {
-			return NewRuntimeError("cannot close file", err)
-		}
 	}
 
-	return nil
+	return err
 }

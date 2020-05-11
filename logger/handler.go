@@ -59,7 +59,9 @@ func RegisterHandler(name string, constructor HandlerConstructor) {
 }
 
 // CreateHandler creates registered log handler by provided name
-func CreateHandler(name string) (handler Handler, err error) {
+func CreateHandler(name string) (Handler, error) {
+	var handler Handler
+
 	gHandlerMutex.RLock()
 	defer gHandlerMutex.RUnlock()
 
@@ -68,8 +70,8 @@ func CreateHandler(name string) (handler Handler, err error) {
 	if ok {
 		handler = constructor()
 	} else {
-		err = NewRuntimeError("cannot create log handler "+name, nil)
+		return nil, NewRuntimeError("cannot create log handler "+name, nil)
 	}
 
-	return
+	return handler, nil
 }

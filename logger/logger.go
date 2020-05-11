@@ -155,12 +155,17 @@ func (logger *Logger) SetHandlers(handlers Handlers) *Logger {
 }
 
 // GetHandler returns added log handler by provided name
-func (logger *Logger) GetHandler(name string) (handler Handler, ok bool) {
+func (logger *Logger) GetHandler(name string) (Handler, error) {
 	logger.mutex.RLock()
 	defer logger.mutex.RUnlock()
 
-	handler, ok = logger.handlers[name]
-	return
+	handler, ok := logger.handlers[name]
+
+	if !ok {
+		return nil, NewRuntimeError("cannot get handler"+name, nil)
+	}
+
+	return handler, nil
 }
 
 // GetHandlers returns all added log handlers
@@ -354,8 +359,8 @@ func (logger *Logger) Close() error {
 		handlerError := handler.Close()
 
 		if handlerError != nil {
-			err = NewRuntimeError("cannot close log handler", nil)
-			fmt.Fprintln(os.Stderr, handlerError)
+			err = NewRuntimeError("cannot close log handler", handlerError)
+			fmt.Fprintln(os.Stderr, err)
 		}
 	}
 
@@ -396,8 +401,18 @@ func (logger *Logger) emit(record *Record) {
 	record.File.Name = filepath.Base(record.File.Path)
 	record.File.Function = filepath.Base(record.File.Function)
 	record.Timestamp.Created = record.Time.Format(time.RFC3339)
-	record.Address = getAddress()
-	record.Hostname = getHostname()
+
+	record.Address, err = getAddress()
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, NewRuntimeError("Logger emit error", err))
+	}
+
+	record.Hostname, err = getHostname()
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, NewRuntimeError("Logger emit error", err))
+	}
 
 	logger.mutex.RLock()
 	defer logger.mutex.RUnlock()
@@ -406,7 +421,7 @@ func (logger *Logger) emit(record *Record) {
 	record.ID, err = logger.idGenerator.Generate()
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, NewRuntimeError("Logger emit error", err))
 	}
 
 	if record.Name == "" {
@@ -420,7 +435,10 @@ func (logger *Logger) emit(record *Record) {
 			err = handler.Emit(record)
 
 			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
+				fmt.Fprintln(
+					os.Stderr,
+					NewRuntimeError("Logger emit error", err),
+				)
 			}
 		}
 	}

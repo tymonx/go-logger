@@ -138,7 +138,13 @@ func (stream *Stream) Emit(record *Record) error {
 	defer stream.mutex.Unlock()
 
 	if stream.writer != nil {
-		_, err := fmt.Fprintln(stream.writer, stream.formatter.Format(record))
+		message, err := stream.formatter.Format(record)
+
+		if err != nil {
+			return NewRuntimeError("cannot format record", err)
+		}
+
+		_, err = fmt.Fprintln(stream.writer, message)
 
 		if err != nil {
 			return NewRuntimeError("cannot write to stream", err)
@@ -153,19 +159,22 @@ func (stream *Stream) Close() error {
 	stream.mutex.Lock()
 	defer stream.mutex.Unlock()
 
-	return stream.close()
-}
+	err := stream.close()
 
-func (stream *Stream) close() error {
-	if stream.writer != nil {
-		err := stream.writer.Close()
-
-		stream.writer = nil
-
-		if err != nil {
-			return NewRuntimeError("cannot close stream", err)
-		}
+	if err != nil {
+		return NewRuntimeError("cannot close stream", err)
 	}
 
 	return nil
+}
+
+func (stream *Stream) close() error {
+	var err error
+
+	if stream.writer != nil {
+		err = stream.writer.Close()
+		stream.writer = nil
+	}
+
+	return err
 }

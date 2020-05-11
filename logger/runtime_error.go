@@ -16,7 +16,6 @@ package logger
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 )
 
@@ -46,7 +45,7 @@ func NewRuntimeError(message string, err error) *RuntimeError {
 // Error returns formatted error string with message, file name, file line
 // number and function name
 func (runtimeError *RuntimeError) Error() string {
-	message := fmt.Sprintf("Logger error %s:%d:%s(): %s",
+	message := fmt.Sprintf("%s:%d:%s(): %s",
 		runtimeError.file,
 		runtimeError.line,
 		runtimeError.function,
@@ -63,11 +62,4 @@ func (runtimeError *RuntimeError) Error() string {
 // Unwrap wrapped error
 func (runtimeError *RuntimeError) Unwrap() error {
 	return runtimeError.err
-}
-
-// Print prints to error output formatted error with message, file name, file
-// line number and function name
-func (runtimeError *RuntimeError) Print() *RuntimeError {
-	fmt.Fprintln(os.Stderr, runtimeError.Error())
-	return runtimeError
 }

@@ -44,6 +44,7 @@ type Syslog struct {
 	connection   net.Conn
 	minimumLevel int
 	maximumLevel int
+	reconnect    bool
 }
 
 // NewSyslog creates a new Syslog log handler object
@@ -155,7 +156,7 @@ func (syslog *Syslog) SetPort(port int) *Syslog {
 
 	if syslog.port != port {
 		syslog.port = port
-		syslog.close()
+		syslog.reconnect = true
 	}
 
 	return syslog
@@ -181,7 +182,7 @@ func (syslog *Syslog) SetNetwork(network string) *Syslog {
 
 	if syslog.network != network {
 		syslog.network = network
-		syslog.close()
+		syslog.reconnect = true
 	}
 
 	return syslog
@@ -208,7 +209,7 @@ func (syslog *Syslog) SetAddress(address string) *Syslog {
 
 	if syslog.address != address {
 		syslog.address = address
-		syslog.close()
+		syslog.reconnect = true
 	}
 
 	return syslog
@@ -228,19 +229,32 @@ func (syslog *Syslog) Emit(record *Record) error {
 	syslog.mutex.Lock()
 	defer syslog.mutex.Unlock()
 
+	if syslog.reconnect {
+		err := syslog.close()
+
+		if err != nil {
+			return NewRuntimeError("cannot close connection to syslog", err)
+		}
+
+		syslog.reconnect = false
+	}
+
 	if syslog.connection == nil {
 		err := syslog.connect()
 
 		if err != nil {
-			return err
+			return NewRuntimeError("cannot open connection to syslog", err)
 		}
 	}
 
 	if syslog.connection != nil {
-		_, err := fmt.Fprintln(
-			syslog.connection,
-			syslog.formatter.Format(record),
-		)
+		message, err := syslog.formatter.Format(record)
+
+		if err != nil {
+			return NewRuntimeError("cannot fomat record", err)
+		}
+
+		_, err = fmt.Fprintln(syslog.connection, message)
 
 		if err != nil {
 			return NewRuntimeError("cannot write to syslog", err)
@@ -255,7 +269,13 @@ func (syslog *Syslog) Close() error {
 	syslog.mutex.Lock()
 	defer syslog.mutex.Unlock()
 
-	return syslog.close()
+	err := syslog.close()
+
+	if err != nil {
+		return NewRuntimeError("cannot close connection to syslog", err)
+	}
+
+	return nil
 }
 
 func (syslog *Syslog) connect() error {
@@ -268,10 +288,9 @@ func (syslog *Syslog) connect() error {
 
 	if err != nil {
 		syslog.connection = nil
-		return NewRuntimeError("cannot connect to syslog", err)
 	}
 
-	return nil
+	return err
 }
 
 func (syslog *Syslog) close() error {
@@ -279,15 +298,10 @@ func (syslog *Syslog) close() error {
 
 	if syslog.connection != nil {
 		err = syslog.connection.Close()
-
 		syslog.connection = nil
-
-		if err != nil {
-			return NewRuntimeError("cannot close connection to syslog", err)
-		}
 	}
 
-	return nil
+	return err
 }
 
 // setFormatterFuncs sets template functions that are specific for Syslog log

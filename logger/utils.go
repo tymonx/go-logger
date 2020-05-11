@@ -24,19 +24,18 @@ import (
 type Named map[string]interface{}
 
 // getHostname returns local hostname
-func getHostname() string {
+func getHostname() (string, error) {
 	hostname, err := os.Hostname()
 
 	if err != nil {
-		hostname = "localhost"
-		NewRuntimeError("cannot get hostname", err).Print()
+		return "localhost", NewRuntimeError("cannot get hostname", err)
 	}
 
-	return hostname
+	return hostname, nil
 }
 
 // getAddress returns local IP address
-func getAddress() string {
+func getAddress() (string, error) {
 	var address string
 
 	connection, err := net.Dial("udp", "8.8.8.8:80")
@@ -46,25 +45,22 @@ func getAddress() string {
 
 		address = connection.LocalAddr().(*net.UDPAddr).IP.String()
 	} else {
-		address = "127.0.0.1"
-		NewRuntimeError("cannot connect to primary Google DNS", err).Print()
+		return "127.0.0.1", NewRuntimeError(
+			"cannot connect to primary Google DNS",
+			err,
+		)
 	}
 
-	return address
+	return address, nil
 }
 
 // getPathLineFunction returns absolute file path, file line number and function
 // name
 func getPathLineFunction(skip int) (path string, line int, function string) {
 	var pc uintptr
-	var ok bool
 
-	pc, path, line, ok = runtime.Caller(skip)
+	pc, path, line, _ = runtime.Caller(skip)
 	function = runtime.FuncForPC(pc).Name()
-
-	if !ok {
-		NewRuntimeError("cannot recover runtime information", nil).Print()
-	}
 
 	return
 }

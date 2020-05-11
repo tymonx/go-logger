@@ -143,33 +143,51 @@ func (formatter *Formatter) GetDateFormat() string {
 
 // Format returns formatted log message string based on provided log record
 // object
-func (formatter *Formatter) Format(record *Record) string {
+func (formatter *Formatter) Format(record *Record) (string, error) {
 	formatter.mutex.Lock()
 	defer formatter.mutex.Unlock()
 
-	return formatter.formatRecord(record)
+	message, err := formatter.formatRecord(record)
+
+	if err != nil {
+		return "", NewRuntimeError("cannot format record", err)
+	}
+
+	return message, nil
 }
 
 // FormatTime returns formatted date string based on provided log record object
-func (formatter *Formatter) FormatTime(record *Record) string {
+func (formatter *Formatter) FormatTime(record *Record) (string, error) {
 	formatter.mutex.Lock()
 	defer formatter.mutex.Unlock()
 
-	return formatter.formatTime(record)
+	message, err := formatter.formatTime(record)
+
+	if err != nil {
+		return "", NewRuntimeError("cannot format time", err)
+	}
+
+	return message, nil
 }
 
 // FormatMessage returns formatted user message string based on provided log
 // record object
-func (formatter *Formatter) FormatMessage(record *Record) string {
+func (formatter *Formatter) FormatMessage(record *Record) (string, error) {
 	formatter.mutex.Lock()
 	defer formatter.mutex.Unlock()
 
-	return formatter.formatMessage(record)
+	message, err := formatter.formatMessage(record)
+
+	if err != nil {
+		return "", NewRuntimeError("cannot format message", err)
+	}
+
+	return message, nil
 }
 
 // Format returns formatted log message string based on provided log record
 // object
-func (formatter *Formatter) formatRecord(record *Record) string {
+func (formatter *Formatter) formatRecord(record *Record) (string, error) {
 	formatter.record = record
 
 	return formatter.formatString(
@@ -181,7 +199,7 @@ func (formatter *Formatter) formatRecord(record *Record) string {
 }
 
 // FormatTime returns formatted date string based on provided log record object
-func (formatter *Formatter) formatTime(record *Record) string {
+func (formatter *Formatter) formatTime(record *Record) (string, error) {
 	formatter.record = record
 
 	return formatter.formatString(
@@ -194,7 +212,9 @@ func (formatter *Formatter) formatTime(record *Record) string {
 
 // FormatMessage returns formatted user message string based on provided log
 // record object
-func (formatter *Formatter) formatMessage(record *Record) string {
+func (formatter *Formatter) formatMessage(record *Record) (string, error) {
+	var err error
+
 	message := record.Message
 
 	if len(record.Arguments) > 0 {
@@ -221,7 +241,7 @@ func (formatter *Formatter) formatMessage(record *Record) string {
 			}
 		}
 
-		message = formatter.formatString(
+		message, err = formatter.formatString(
 			template.New("").Delims("{", "}").Funcs(funcMap),
 			formatter.messageBuffer,
 			message,
@@ -229,7 +249,7 @@ func (formatter *Formatter) formatMessage(record *Record) string {
 		)
 	}
 
-	return message
+	return message, err
 }
 
 // argumentValue returns closure that returns log argument used in log message
@@ -258,8 +278,8 @@ func (formatter *Formatter) argumentAutomatic() func() interface{} {
 }
 
 // formatString returns formatted string
-func (formatter *Formatter) formatString(template *template.Template, buffer *bytes.Buffer, format string, object interface{}) string {
-	buffer.Reset()
+func (formatter *Formatter) formatString(template *template.Template, buffer *bytes.Buffer, format string, object interface{}) (string, error) {
+	var message string
 
 	if format != "" {
 		var err error
@@ -267,19 +287,21 @@ func (formatter *Formatter) formatString(template *template.Template, buffer *by
 		template, err = template.Parse(format)
 
 		if err != nil {
-			NewRuntimeError("cannot parse text template", err).Print()
-			return format
+			return "", NewRuntimeError("cannot parse text template", err)
 		}
+
+		buffer.Reset()
 
 		err = template.Execute(buffer, object)
 
 		if err != nil {
-			NewRuntimeError("cannot execute text template", err).Print()
-			return format
+			return "", NewRuntimeError("cannot execute text template", err)
 		}
+
+		message = buffer.String()
 	}
 
-	return buffer.String()
+	return message, nil
 }
 
 // setFuncs sets default template functions used to formatting log message
@@ -295,10 +317,28 @@ func (formatter *Formatter) setFuncs() {
 			return os.ExpandEnv(name)
 		},
 		"date": func() string {
-			return formatter.formatTime(formatter.record)
+			date, err := formatter.formatTime(formatter.record)
+
+			if err != nil {
+				fmt.Fprintln(
+					os.Stderr,
+					NewRuntimeError("Logger format date error", err),
+				)
+			}
+
+			return date
 		},
 		"message": func() string {
-			return formatter.formatMessage(formatter.record)
+			message, err := formatter.formatMessage(formatter.record)
+
+			if err != nil {
+				fmt.Fprintln(
+					os.Stderr,
+					NewRuntimeError("Logger format message error", err),
+				)
+			}
+
+			return message
 		},
 		"levelValue": func() int {
 			return formatter.record.Level.Value

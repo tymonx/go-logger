@@ -60,32 +60,40 @@ type Record struct {
 }
 
 // GetIDNumber returns ID as number
-func (record *Record) GetIDNumber() (id int, err error) {
+func (record *Record) GetIDNumber() (int, error) {
+	var id int
+	var err error
+
 	switch record.ID.(type) {
 	case string:
 		id, err = strconv.Atoi(record.ID.(string))
-		err = NewRuntimeError("invalid ID conversion", err)
+
+		if err != nil {
+			return 0, NewRuntimeError("invalid ID conversion", err)
+		}
 	case int:
 		id = record.ID.(int)
 	default:
-		err = NewRuntimeError("invalid ID type", nil)
+		return 0, NewRuntimeError("invalid ID type", nil)
 	}
 
-	return
+	return id, nil
 }
 
 // GetIDString returns ID as string
-func (record *Record) GetIDString() (id string, err error) {
+func (record *Record) GetIDString() (string, error) {
+	var id string
+
 	switch record.ID.(type) {
 	case string:
 		id = record.ID.(string)
 	case int:
 		id = strconv.Itoa(record.ID.(int))
 	default:
-		err = NewRuntimeError("invalid ID type", nil)
+		return "", NewRuntimeError("invalid ID type", nil)
 	}
 
-	return
+	return id, nil
 }
 
 // ToJSON packs data to JSON
@@ -99,6 +107,12 @@ func (record *Record) FromJSON(data []byte) error {
 }
 
 // GetMessage returns formatted message
-func (record *Record) GetMessage() string {
-	return NewFormatter().FormatMessage(record)
+func (record *Record) GetMessage() (string, error) {
+	message, err := NewFormatter().FormatMessage(record)
+
+	if err != nil {
+		return "", NewRuntimeError("cannot get formatted message", err)
+	}
+
+	return message, nil
 }

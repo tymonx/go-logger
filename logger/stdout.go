@@ -120,7 +120,13 @@ func (stdout *Stdout) GetLevelRange() (min int, max int) {
 
 // Emit logs messages from logger to standard output
 func (stdout *Stdout) Emit(record *Record) error {
-	_, err := fmt.Fprintln(os.Stdout, stdout.formatter.Format(record))
+	message, err := stdout.formatter.Format(record)
+
+	if err != nil {
+		return NewRuntimeError("cannot format record", err)
+	}
+
+	_, err = fmt.Fprintln(os.Stdout, message)
 
 	if err != nil {
 		return NewRuntimeError("cannot print to stdout", err)

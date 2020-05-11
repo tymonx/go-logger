@@ -39,7 +39,9 @@ func RegisterIDGenerator(name string, constructor IDGeneratorConstructor) {
 }
 
 // CreateIDGenerator returns registered ID generator by provided identifier name
-func CreateIDGenerator(name string) (idGenerator IDGenerator, err error) {
+func CreateIDGenerator(name string) (IDGenerator, error) {
+	var idGenerator IDGenerator
+
 	gIDGeneratorMutex.RLock()
 	defer gIDGeneratorMutex.RUnlock()
 
@@ -48,8 +50,8 @@ func CreateIDGenerator(name string) (idGenerator IDGenerator, err error) {
 	if ok {
 		idGenerator = constructor()
 	} else {
-		err = NewRuntimeError("cannot create ID generator "+name, nil)
+		return nil, NewRuntimeError("cannot create ID generator "+name, nil)
 	}
 
-	return
+	return idGenerator, nil
 }
