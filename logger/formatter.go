@@ -75,7 +75,6 @@ func (formatter *Formatter) Reset() *Formatter {
 
 	formatter.format = DefaultFormat
 	formatter.dateFormat = DefaultDateFormat
-	formatter.template = template.New("").Delims("{", "}")
 	formatter.placeholder = DefaultPlaceholder
 
 	return formatter
