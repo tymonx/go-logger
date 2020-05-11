@@ -20,7 +20,7 @@ import (
 
 // These constants define default values for Worker
 const (
-	DefaultWorkerQueueLength = 4096
+	DefaultQueueLength = 4096
 )
 
 // A Worker represents an active logger worker thread. It handles formatting
@@ -38,7 +38,7 @@ var gWorkerInstance *Worker
 func NewWorker() *Worker {
 	worker := &Worker{
 		flush:   make(chan *sync.WaitGroup, 1),
-		records: make(chan *Record, DefaultWorkerQueueLength),
+		records: make(chan *Record, DefaultQueueLength),
 	}
 
 	go worker.run()
@@ -62,7 +62,7 @@ func (worker *Worker) SetQueueLength(length int) *Worker {
 	defer worker.mutex.Unlock()
 
 	if length <= 0 {
-		length = DefaultWorkerQueueLength
+		length = DefaultQueueLength
 	}
 
 	if cap(worker.records) != length {
