@@ -29,8 +29,9 @@ import (
 
 // These constants define default values for Formatter
 const (
-	DefaultDateFormat = "{year}-{month}-{day} {hour}:{minute}:{second},{milisecond}"
-	DefaultFormat     = "{date} - {Level | printf \"%-8s\"} - {file}:{line}:{function}(): {message}"
+	DefaultDateFormat  = "{year}-{month}-{day} {hour}:{minute}:{second},{milisecond}"
+	DefaultFormat      = "{date} - {Level | printf \"%-8s\"} - {file}:{line}:{function}(): {message}"
+	DefaultPlaceholder = "p"
 )
 
 // FormatterFuncs defines map of template functions
@@ -56,13 +57,26 @@ func NewFormatter() *Formatter {
 		format:        DefaultFormat,
 		dateFormat:    DefaultDateFormat,
 		template:      template.New("").Delims("{", "}"),
-		placeholder:   "p",
+		placeholder:   DefaultPlaceholder,
 		timeBuffer:    new(bytes.Buffer),
 		formatBuffer:  new(bytes.Buffer),
 		messageBuffer: new(bytes.Buffer),
 	}
 
 	formatter.setFuncs()
+
+	return formatter
+}
+
+// Reset resets Formatter
+func (formatter *Formatter) Reset() *Formatter {
+	formatter.mutex.Lock()
+	defer formatter.mutex.Unlock()
+
+	formatter.format = DefaultFormat
+	formatter.dateFormat = DefaultDateFormat
+	formatter.template = template.New("").Delims("{", "}")
+	formatter.placeholder = DefaultPlaceholder
 
 	return formatter
 }
