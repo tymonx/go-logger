@@ -21,7 +21,6 @@
 package logger
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -360,7 +359,7 @@ func (logger *Logger) Close() error {
 
 		if handlerError != nil {
 			err = NewRuntimeError("cannot close log handler", handlerError)
-			fmt.Fprintln(os.Stderr, err)
+			printError(err)
 		}
 	}
 
@@ -405,13 +404,13 @@ func (logger *Logger) emit(record *Record) {
 	record.Address, err = getAddress()
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, NewRuntimeError("Logger emit error", err))
+		printError(NewRuntimeError("cannot get local IP address", err))
 	}
 
 	record.Hostname, err = getHostname()
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, NewRuntimeError("Logger emit error", err))
+		printError(NewRuntimeError("cannot get local hostname", err))
 	}
 
 	logger.mutex.RLock()
@@ -421,7 +420,7 @@ func (logger *Logger) emit(record *Record) {
 	record.ID, err = logger.idGenerator.Generate()
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, NewRuntimeError("Logger emit error", err))
+		printError(NewRuntimeError("cannot generate ID", err))
 	}
 
 	if record.Name == "" {
@@ -435,10 +434,7 @@ func (logger *Logger) emit(record *Record) {
 			err = handler.Emit(record)
 
 			if err != nil {
-				fmt.Fprintln(
-					os.Stderr,
-					NewRuntimeError("Logger emit error", err),
-				)
+				printError(NewRuntimeError("cannot emit record", err))
 			}
 		}
 	}

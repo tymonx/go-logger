@@ -320,10 +320,7 @@ func (formatter *Formatter) setFuncs() {
 			date, err := formatter.formatTime(formatter.record)
 
 			if err != nil {
-				fmt.Fprintln(
-					os.Stderr,
-					NewRuntimeError("Logger format date error", err),
-				)
+				printError(NewRuntimeError("cannot format date", err))
 			}
 
 			return date
@@ -332,10 +329,7 @@ func (formatter *Formatter) setFuncs() {
 			message, err := formatter.formatMessage(formatter.record)
 
 			if err != nil {
-				fmt.Fprintln(
-					os.Stderr,
-					NewRuntimeError("Logger format message error", err),
-				)
+				printError(NewRuntimeError("cannot format message", err))
 			}
 
 			return message

@@ -15,6 +15,7 @@
 package logger
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"runtime"
@@ -63,4 +64,9 @@ func getPathLineFunction(skip int) (path string, line int, function string) {
 	function = runtime.FuncForPC(pc).Name()
 
 	return
+}
+
+// printError prints error to error output
+func printError(err error) {
+	fmt.Fprintln(os.Stderr, "Logger error:", err)
 }
