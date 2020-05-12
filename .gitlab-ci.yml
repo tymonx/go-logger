@@ -222,15 +222,17 @@
             MODULE=$(cat "$FILE" | sed -n -E 's/^\s*module\s+([[:graph:]]+)\s*$/\1/p')
         fi
 
-        URL="http://localhost:6060/pkg/$MODULE"
+        URL="http://localhost:6060/pkg/$MODULE/"
 
         godoc &
         PID=$!
 
+        echo "Start A"
         while ! curl --fail --silent "$URL" > /dev/null; do
             sleep 0.1
         done
 
+        echo "Start B"
         wget \
             --mirror \
             --recursive \
@@ -244,8 +246,10 @@
             --no-host-directories \
             "$URL"
 
+        echo "Start C"
         kill -9 "$PID"
 
+        echo "Start D"
         rm -rf public
         mv godoc/pkg/$MODULE public
     }
