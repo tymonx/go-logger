@@ -109,8 +109,8 @@
 build:
     stage: build
     variables:
-        GO_VERSION: 1.14.2
-        GO_ALPINE_VERSION: 3.11
+        GO_VERSION: "1.14.2"
+        GO_ALPINE_VERSION: "3.11"
         GO_DOCKER_IMAGE: golang
         GO_DOCKER_TAG: ${GO_VERSION}-alpine${GO_ALPINE_VERSION}
         GO_FORMAT_ENABLE: 1
