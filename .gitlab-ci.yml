@@ -153,7 +153,7 @@
             mkdir -p "$(basename $FILE)"
 
             # Removing duplicated slashes '/'
-            URL=$(echo "$URL" | sed -E 's,([^:]/)/+,/,g')
+            URL=$(echo "$URL" | sed -E 's,([^:]/)/+,\1,g')
 
             # Creating html file with redirection
             cat <<-EOF > "$FILE"
