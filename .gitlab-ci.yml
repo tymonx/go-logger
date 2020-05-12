@@ -218,7 +218,7 @@
         echo "Generating Go documentation..."
 
         # Setup
-        rm -rf public $GO_DOC_DIRECTORY
+        rm -rf "$GO_DOC_DIRECTORY/$GO_DOC_PREFIX"
 
         FILE=$(go env GOMOD)
 
@@ -263,10 +263,18 @@
 
         # If the index.html file doesn't exist, create it
         if [[ ! -f "$CI_PROJECT_DIR/public/index.html" ]]; then
+            echo "Generating $CI_PROJECT_DIR/public/index.html file..."
+
+            # Documentation page
             URL="$CI_PAGES_URL/$GO_DOC_PREFIX/pkg/$MODULE/$GO_DOC_PATH/"
 
+            # Removing duplicated slashes '/'
+            URL=$(echo "$URL" | sed -E 's,/+,/,g')
+
+            # Creating public directory for GitLab Pages
             mkdir -p "$CI_PROJECT_DIR/public"
 
+            # Creating the index.html file with redirection to documentation page
             cat <<-EOF > "$CI_PROJECT_DIR/public/index.html"
     <!DOCTYPE HTML>
     <html lang="en-US">
