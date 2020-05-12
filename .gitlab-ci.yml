@@ -217,6 +217,8 @@
 
         echo "Generating Go documentation..."
 
+        rm -rf public $GO_DOC_DIRECTORY
+
         FILE=$(go env GOMOD)
 
         if [[ -f "$FILE" ]]; then
@@ -241,7 +243,7 @@
             --execute=robots=off \
             --include-directories="/pkg,/lib" \
             --exclude-directories="*" \
-            --directory-prefix=godoc \
+            --directory-prefix="$GO_DOC_DIRECTORY" \
             --no-host-directories \
             "$URL" || STATUS=$?
 
@@ -250,9 +252,6 @@
         if [[ $STATUS -ne 0 ]] && [[ $STATUS -ne 8 ]]; then
             exit "$STATUS"
         fi
-
-        rm -rf public
-        mv godoc/pkg/$MODULE public
     }
 
     if is_true "$GO_LINT_ENABLE"; then
@@ -305,6 +304,7 @@
         GO_ALPINE_VERSION: "3.11"
         GO_DOCKER_IMAGE: golang
         GO_DOCKER_TAG: ${GO_VERSION}-alpine${GO_ALPINE_VERSION}
+        GO_DOC_DIRECTORY: public
         GO_FORMAT_ENABLE: 0
         GO_BUILD_ENABLE: 0
         GO_LINT_ENABLE: 0
