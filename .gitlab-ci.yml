@@ -13,7 +13,7 @@
 # limitations under the License.
 
 .go-common: &go-common |-
-    # Valid Go build
+    # Load common Go utilities
 
     function strip {
         # Strip variable from leading and trailing whitespaces
@@ -49,6 +49,7 @@
     function install_git {
         # Install the Git command
         if ! is_git; then
+            echo "The git command is missing. Installing the git command..."
 
             # Alpine image
             if is_apk; then
@@ -65,16 +66,20 @@
         # Install the golint command
         if ! is_golint; then
             install_git
+
+            echo "The golint command is missing. Installing the golint command..."
             go get -u golang.org/x/lint/golint
         fi
     }
 
 .go-format: &go-format |-
+    # Checking if Go source files are formatted correctly
+
     function go_format {
         # Go format
         local FILES
 
-        echo "Checking if all Go source files are formatted correctly..."
+        echo "Checking if Go source files are formatted correctly..."
         FILES=$(gofmt -l ./)
 
         if [[ -z "$FILES" ]]; then
@@ -96,8 +101,15 @@
     fi
 
 .go-lint: &go-lint |-
+    # Linting Go source files
+
     function go_lint {
         # Go lint
+        install_golint
+
+        echo "Linting Go source files..."
+        golint -set_exit_status ./...
+        echo "All Go source files are linted correctly"
     }
 
     if is_true "$GO_LINT_ENABLE"; then
