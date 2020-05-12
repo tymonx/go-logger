@@ -205,12 +205,49 @@
 
     function go_doc {
         # Go doc
+        local URL
+        local PID
+        local FILE
+        local MODULE
+
         install_curl
         install_wget
         install_godoc
 
         echo "Generating Go documentation..."
-        echo "GOMOD: $(go env GOMOD)"
+
+        FILE=$(go env GOMOD)
+
+        if [[ -f "$FILE" ]]; then
+            MODULE=$(cat "$FILE" | sed -n -E 's/^\s*module\s+([[:graph:]]+)\s*$/\1/p')
+        fi
+
+        URL="http://localhost:6060/pkg/$MODULE"
+
+        godoc &
+        PID=$!
+
+        while ! curl --fail --silent "$URL" > /dev/null; do
+            sleep 0.1
+        done
+
+        wget \
+            --mirror \
+            --recursive \
+            --convert-links \
+            --page-requisites \
+            --adjust-extension \
+            --execute=robots=off \
+            --include-directories="/pkg,/lib" \
+            --exclude-directories="*" \
+            --directory-prefix=godoc \
+            --no-host-directories \
+            "$URL"
+
+        kill -9 "$PID"
+
+        rm -rf public
+        mv godoc/pkg/$MODULE public
     }
 
     if is_true "$GO_LINT_ENABLE"; then
@@ -292,6 +329,9 @@
 .go-doc:
     extends: .go-base
     stage: deploy
+    artifacts:
+        paths:
+            - public
     variables:
         GO_DOC_ENABLE: 1
 
