@@ -138,6 +138,43 @@
         fi
     }
 
+    function create_redirect_html {
+        # Creating html file with redirectorion
+        local FILE
+        local URL
+
+        FILE="$1"
+        URL="$2"
+
+        if [[ ! -f "$FILE" ]]; then
+            echo "Generating $FILE file..."
+
+            # Create directory
+            mkdir -p "$(basename $FILE)"
+
+            # Removing duplicated slashes '/'
+            URL=$(echo "$URL" | sed -E 's,/+,/,g')
+
+            # Creating the index.html file with redirection to documentation page
+            cat <<-EOF > "$FILE"
+    <!DOCTYPE HTML>
+    <html lang="en-US">
+        <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="refresh" content="0; url=$URL">
+            <script type="text/javascript">
+                window.location.href = "$URL"
+            </script>
+            <title>Page Redirection</title>
+        </head>
+        <body>
+            If you are not redirected automatically, follow this <a href='$URL'>link to documentation</a>.
+        </body>
+    </html>
+    EOF
+        fi
+    }
+
     function go_format {
         # Go format
         local FILES
@@ -261,37 +298,9 @@
             exit "$STATUS"
         fi
 
-        # If the index.html file doesn't exist, create it
-        if [[ ! -f "$CI_PROJECT_DIR/public/index.html" ]]; then
-            echo "Generating $CI_PROJECT_DIR/public/index.html file..."
-
-            # Documentation page
-            URL="$CI_PAGES_URL/$GO_DOC_PREFIX/pkg/$MODULE/$GO_DOC_PATH/"
-
-            # Removing duplicated slashes '/'
-            URL=$(echo "$URL" | sed -E 's,/+,/,g')
-
-            # Creating public directory for GitLab Pages
-            mkdir -p "$CI_PROJECT_DIR/public"
-
-            # Creating the index.html file with redirection to documentation page
-            cat <<-EOF > "$CI_PROJECT_DIR/public/index.html"
-    <!DOCTYPE HTML>
-    <html lang="en-US">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="refresh" content="0; url=$URL">
-            <script type="text/javascript">
-                window.location.href = "$URL"
-            </script>
-            <title>Page Redirection</title>
-        </head>
-        <body>
-            If you are not redirected automatically, follow this <a href='$URL'>link to documentation</a>.
-        </body>
-    </html>
-    EOF
-        fi
+        create_redirect_html \
+            "$CI_PROJECT_DIR/public/index.html" \
+            "$CI_PAGES_URL/$GO_DOC_PREFIX/pkg/$MODULE/$GO_DOC_PATH/"
 
         echo "Generated Go documentation"
     }
