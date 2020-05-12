@@ -41,6 +41,16 @@
         command -v gcc 2>&1 >/dev/null
     }
 
+    function is_curl {
+        # Is the curl command available
+        command -v curl 2>&1 >/dev/null
+    }
+
+    function is_wget {
+        # Is the wget command available
+        command -v wget 2>&1 >/dev/null && (wget --help | grep -q -e '--execute')
+    }
+
     function is_golint {
         # Is the golint command available
         command -v golint 2>&1 >/dev/null
@@ -78,6 +88,32 @@
             if is_apk; then
                 apk update --no-cache
                 apk add --no-cache gcc libc-dev
+            fi
+        fi
+    }
+
+    function install_curl {
+        # Install the curl command
+        if ! is_curl; then
+            echo "The curl command is missing. Installing the curl command..."
+
+            # Alpine image
+            if is_apk; then
+                apk update --no-cache
+                apk add --no-cache curl
+            fi
+        fi
+    }
+
+    function install_wget {
+        # Install the wget command
+        if ! is_wget; then
+            echo "The wget command is missing. Installing the wget command..."
+
+            # Alpine image
+            if is_apk; then
+                apk update --no-cache
+                apk add --no-cache wget
             fi
         fi
     }
@@ -169,9 +205,12 @@
 
     function go_doc {
         # Go doc
+        install_curl
+        install_wget
         install_godoc
 
         echo "Generating Go documentation..."
+        echo "GOMOD: $(go env GOMOD)"
     }
 
     if is_true "$GO_LINT_ENABLE"; then
@@ -183,6 +222,8 @@
     fi
 
     if is_true "$GO_DOC_ENABLE"; then
+        install_curl
+        install_wget
         install_godoc
     fi
 
