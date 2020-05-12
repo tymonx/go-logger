@@ -217,23 +217,29 @@
 
         echo "Generating Go documentation..."
 
+        # Setup
         rm -rf public $GO_DOC_DIRECTORY
 
         FILE=$(go env GOMOD)
 
+        # Extract Go module name from a Go module file
         if [[ -f "$FILE" ]]; then
             MODULE=$(cat "$FILE" | sed -n -E 's/^\s*module\s+([[:graph:]]+)\s*$/\1/p')
         fi
 
+        # URL path to Go package and module documentation
         URL="http://localhost:6060/pkg/$MODULE/"
 
+        # Starting godoc server
         godoc &
         PID=$!
 
+        # Waiting for godoc server
         while ! curl --fail --silent "$URL" > /dev/null; do
             sleep 0.1
         done
 
+        # Download all documentation content from running godoc server
         wget \
             --mirror \
             --recursive \
@@ -243,15 +249,43 @@
             --execute=robots=off \
             --include-directories="/pkg,/lib" \
             --exclude-directories="*" \
-            --directory-prefix="$GO_DOC_DIRECTORY" \
+            --directory-prefix="$GO_DOC_DIRECTORY/$GO_DOC_PREFIX" \
             --no-host-directories \
             "$URL" || STATUS=$?
 
+        # Stop godoc server
         kill -9 "$PID"
 
+        # Check wget status code. The error code 8 is also valid
         if [[ $STATUS -ne 0 ]] && [[ $STATUS -ne 8 ]]; then
             exit "$STATUS"
         fi
+
+        # If the index.html file doesn't exist, create it
+        if [[ ! -f "$CI_PROJECT_DIR/public/index.html" ]]; then
+            URL="$CI_PAGES_URL/$GO_DOC_PREFIX/pkg/$MODULE/$GO_DOC_PATH/"
+
+            mkdir -p "$CI_PROJECT_DIR/public"
+
+            cat <<-EOF > "$CI_PROJECT_DIR/public/index.html"
+    <!DOCTYPE HTML>
+    <html lang="en-US">
+        <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="refresh" content="0; url=$URL">
+            <script type="text/javascript">
+                window.location.href = "$URL"
+            </script>
+            <title>Page Redirection</title>
+        </head>
+        <body>
+            If you are not redirected automatically, follow this <a href='$URL'>link to documentation</a>.
+        </body>
+    </html>
+    EOF
+        fi
+
+        echo "Generated Go documentation"
     }
 
     if is_true "$GO_LINT_ENABLE"; then
@@ -304,6 +338,8 @@
         GO_ALPINE_VERSION: "3.11"
         GO_DOCKER_IMAGE: golang
         GO_DOCKER_TAG: ${GO_VERSION}-alpine${GO_ALPINE_VERSION}
+        GO_DOC_PREFIX: doc
+        GO_DOC_PATH: ""
         GO_DOC_DIRECTORY: public
         GO_FORMAT_ENABLE: 0
         GO_BUILD_ENABLE: 0
