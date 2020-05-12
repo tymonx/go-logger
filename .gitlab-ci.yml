@@ -152,6 +152,12 @@
         fi
     }
 
+    function go_doc {
+        # Go doc
+
+        echo "Generating Go documentation..."
+    }
+
     if is_true "$GO_LINT_ENABLE"; then
         install_golint
     fi
@@ -184,6 +190,12 @@
         go_test
     fi
 
+    if is_true "$GO_DOC_ENABLE"; then
+        GO_DOC_ENABLE=0
+
+        go_doc
+    fi
+
 .go-base:
     variables:
         GO_VERSION: "1.14.2"
@@ -194,6 +206,7 @@
         GO_BUILD_ENABLE: 0
         GO_LINT_ENABLE: 0
         GO_TEST_ENABLE: 0
+        GO_DOC_ENABLE: 0
         GO_COVERAGE: 80
     image: ${GO_DOCKER_IMAGE}:${GO_DOCKER_TAG}
     before_script:
@@ -215,8 +228,19 @@
     variables:
         GO_TEST_ENABLE: 1
 
+.go-doc:
+    extends: .go-base
+    stage: deploy
+    variables:
+        GO_DOC_ENABLE: 1
+
 build:
     extends: .go-build
 
 test:
     extends: .go-test
+    variables:
+        GO_COVERAGE: 0
+
+pages:
+    extends: .go-doc
