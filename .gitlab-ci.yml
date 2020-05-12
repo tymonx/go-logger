@@ -48,7 +48,7 @@
 
     function is_wget {
         # Is the wget command available
-        command -v wget 2>&1 >/dev/null && (wget --help | grep -q -e '--execute')
+        command -v wget 2>&1 >/dev/null && (wget --help 2>&1 | grep -q -e '--execute')
     }
 
     function is_golint {
@@ -208,6 +208,7 @@
         local URL
         local PID
         local FILE
+        local STATUS
         local MODULE
 
         install_curl
@@ -227,12 +228,10 @@
         godoc &
         PID=$!
 
-        echo "Start A"
         while ! curl --fail --silent "$URL" > /dev/null; do
             sleep 0.1
         done
 
-        echo "Start B"
         wget \
             --mirror \
             --recursive \
@@ -244,12 +243,14 @@
             --exclude-directories="*" \
             --directory-prefix=godoc \
             --no-host-directories \
-            "$URL"
+            "$URL" || STATUS=$?
 
-        echo "Start C"
         kill -9 "$PID"
 
-        echo "Start D"
+        if [[ $STATUS -ne 0 ]] && [[ $STATUS -ne 8 ]]; then
+            exit "$STATUS"
+        fi
+
         rm -rf public
         mv godoc/pkg/$MODULE public
     }
