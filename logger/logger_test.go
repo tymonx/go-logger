@@ -15,21 +15,9 @@
 package logger
 
 import (
-	"fmt"
 	"math/rand"
-	"os"
 	"testing"
 )
-
-const (
-	coverageLevel = 0.8
-)
-
-func compare(test *testing.T, captured interface{}, expected interface{}) {
-	if captured != expected {
-		test.Error("captured =", captured, "want", expected)
-	}
-}
 
 func Example() {
 	logger := New()
@@ -66,26 +54,6 @@ func Example() {
 	// 2020 - Info     - logger_test.go:51:logger.Example(): Object placeholders 3 2 1
 }
 
-func TestMain(main *testing.M) {
-	defer Close()
-
-	returnCode := main.Run()
-
-	if (returnCode == 0) && (testing.CoverMode() != "") {
-		coverage := testing.Coverage()
-
-		if coverage < coverageLevel {
-			fmt.Fprintf(
-				os.Stderr,
-				"Tests passed but coverage failed at %.1f%%\n", coverage*100,
-			)
-			returnCode = -2
-		}
-	}
-
-	os.Exit(returnCode)
-}
-
 func TestNew(test *testing.T) {
 	var object interface{} = New()
 
@@ -107,7 +75,9 @@ func TestNew(test *testing.T) {
 func TestGetHandlers(test *testing.T) {
 	handlers := New().GetHandlers()
 
-	compare(test, len(handlers), 2)
+	if len(handlers) != 2 {
+		test.Errorf("len(handlers) = 2; want %d", len(handlers))
+	}
 
 	if _, ok := handlers["stdout"]; !ok {
 		test.Error("handlers[\"stdout\"] doesn't exist")
@@ -130,9 +100,11 @@ func TestSetName(test *testing.T) {
 	logger := New()
 
 	for _, expected := range []string{"logger", "log-2", "logx", "ll"} {
-		captured := logger.SetName(expected).GetName()
+		name := logger.SetName(expected).GetName()
 
-		compare(test, captured, expected)
+		if name != expected {
+			test.Errorf("logger.SetName(%s); got %s", name, expected)
+		}
 	}
 }
 
@@ -141,16 +113,18 @@ func TestSetErrorCode(test *testing.T) {
 
 	for count := 0; count < 10; count++ {
 		expected := rand.Int()
-		captured := logger.SetErrorCode(expected).GetErrorCode()
+		errorCode := logger.SetErrorCode(expected).GetErrorCode()
 
-		compare(test, captured, expected)
+		if errorCode != expected {
+			test.Errorf("logger.SetErrorCode(%d); got %d", errorCode, expected)
+		}
 	}
 }
 
 func TestGetErrorCode(test *testing.T) {
-	captured := New().GetErrorCode()
+	errorCode := New().GetErrorCode()
 
-	if captured != DefaultErrorCode {
-		compare(test, captured, DefaultErrorCode)
+	if errorCode != DefaultErrorCode {
+		test.Errorf("logger.GetErrorCode() = %d; want %d", errorCode, DefaultErrorCode)
 	}
 }

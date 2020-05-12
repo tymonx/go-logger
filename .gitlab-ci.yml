@@ -67,8 +67,7 @@
         if ! is_golint; then
             install_git
 
-            echo -n "The golint command is missing. "
-            echo "Installing the golint command..."
+            echo -n "The golint command is missing. Installing the golint command..."
             go get -u golang.org/x/lint/golint
         fi
     }
@@ -101,6 +100,20 @@
         echo "All Go source files are linted correctly"
     }
 
+    function go_build {
+        # Go build
+        echo "Building Go source files..."
+        go build ./...
+        echo "All Go source files are built correctly"
+    }
+
+    function go_test {
+        # Go test
+        echo "Testing Go source files..."
+        go test -v -cover ./...
+        echo "All Go source files are tested correctly"
+    }
+
     if is_true "$GO_LINT_ENABLE"; then
         install_golint
     fi
@@ -117,6 +130,18 @@
         go_lint
     fi
 
+    if is_true "$GO_BUILD_ENABLE"; then
+        GO_BUILD_ENABLE=0
+
+        go_build
+    fi
+
+    if is_true "$GO_TEST_ENABLE"; then
+        GO_TEST_ENABLE=0
+
+        go_test
+    fi
+
 .go-base:
     variables:
         GO_VERSION: "1.14.2"
@@ -124,7 +149,9 @@
         GO_DOCKER_IMAGE: golang
         GO_DOCKER_TAG: ${GO_VERSION}-alpine${GO_ALPINE_VERSION}
         GO_FORMAT_ENABLE: 0
+        GO_BUILD_ENABLE: 0
         GO_LINT_ENABLE: 0
+        GO_TEST_ENABLE: 0
     image: ${GO_DOCKER_IMAGE}:${GO_DOCKER_TAG}
     before_script:
         - *go-script
@@ -136,7 +163,17 @@
     stage: build
     variables:
         GO_FORMAT_ENABLE: 1
+        GO_BUILD_ENABLE: 1
         GO_LINT_ENABLE: 1
+
+.go-test:
+    extends: .go-base
+    stage: test
+    variables:
+        GO_TEST_ENABLE: 1
 
 build:
     extends: .go-build
+
+test:
+    extends: .go-test
