@@ -139,7 +139,7 @@
     }
 
     function create_redirect_html {
-        # Creating html file with redirectorion
+        # Creating html file with redirection
         local FILE
         local URL
 
@@ -155,7 +155,7 @@
             # Removing duplicated slashes '/'
             URL=$(echo "$URL" | sed -E 's,/+,/,g')
 
-            # Creating the index.html file with redirection to documentation page
+            # Creating html file with redirection
             cat <<-EOF > "$FILE"
     <!DOCTYPE HTML>
     <html lang="en-US">
@@ -298,6 +298,7 @@
             exit "$STATUS"
         fi
 
+        # Creating the index.html file with redirection to documentation page
         create_redirect_html \
             "$CI_PROJECT_DIR/public/index.html" \
             "$CI_PAGES_URL/$GO_DOC_PREFIX/pkg/$MODULE/$GO_DOC_PATH/"
