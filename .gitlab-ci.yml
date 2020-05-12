@@ -152,13 +152,8 @@
             # Create directory
             mkdir -p "$(basename $FILE)"
 
-            echo "PAGES: $CI_PAGES_URL"
-            echo "URL: $URL"
-
             # Removing duplicated slashes '/'
-            URL=$(echo "$URL" | sed -E 's,/+,/,g')
-
-            echo "URL: $URL"
+            URL=$(echo "$URL" | sed -E 's,([^:]/)/+,/,g')
 
             # Creating html file with redirection
             cat <<-EOF > "$FILE"
