@@ -152,8 +152,13 @@
             # Create directory
             mkdir -p "$(basename $FILE)"
 
+            echo "PAGES: $CI_PAGES_URL"
+            echo "URL: $URL"
+
             # Removing duplicated slashes '/'
             URL=$(echo "$URL" | sed -E 's,/+,/,g')
+
+            echo "URL: $URL"
 
             # Creating html file with redirection
             cat <<-EOF > "$FILE"
@@ -168,7 +173,7 @@
             <title>Page Redirection</title>
         </head>
         <body>
-            If you are not redirected automatically, follow this <a href='$URL'>link to documentation</a>.
+            If you are not redirected automatically, follow this <a href='$URL'>link</a>.
         </body>
     </html>
     EOF
