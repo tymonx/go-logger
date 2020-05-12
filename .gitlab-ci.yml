@@ -124,11 +124,17 @@
 
     function go_test {
         # Go test
+        local OUTPUT
+        local COVERAGE
+
         install_gcc
 
         echo "Testing Go source files..."
-        go test -v -cover ./...
+        OUTPUT=$(go test -v -cover ./... | tee /dev/tty)
         echo "All Go source files are tested correctly"
+
+        COVERAGE=$(echo "$OUTPUT" | sed -n -E 's/^coverage: ([0-9]+\.[0-9]+)% of statements$/\1/p')
+        echo "Coverage value: $COVERAGE"
     }
 
     if is_true "$GO_LINT_ENABLE"; then
@@ -173,6 +179,7 @@
         GO_BUILD_ENABLE: 0
         GO_LINT_ENABLE: 0
         GO_TEST_ENABLE: 0
+        GO_COVERAGE: 80
     image: ${GO_DOCKER_IMAGE}:${GO_DOCKER_TAG}
     before_script:
         - *go-script
