@@ -124,17 +124,29 @@
 
     function go_test {
         # Go test
-        local OUTPUT
         local COVERAGE
 
         install_gcc
 
         echo "Testing Go source files..."
-        OUTPUT=$(go test -v -cover ./... | tee /dev/stderr)
+        go test -v -cover -coverprofile=coverage.out ./...
         echo "All Go source files are tested correctly"
 
-        COVERAGE=$(echo "$OUTPUT" | sed -n -E 's/^coverage: ([0-9]+\.[0-9]+)% of statements$/\1/p')
-        echo "Coverage value: $COVERAGE"
+        echo ""
+        echo "Showing total coverage result:"
+        go tool cover -func=coverage.out
+
+        echo ""
+        echo "Validating coverage threshold:"
+        COVERAGE=$(go tool cover -func=coverage.out | grep "total:")
+        COVERAGE=$(echo "$COVERAGE" | sed -n -E 's/^\s*total:\s*\(statements\)\s*([0-9]+\.[0-9]+)%\s*$/\1/p')
+
+        if [[ 0 -eq $(echo "${COVERAGE} < ${GO_COVERAGE}" | bc) ]]; then
+            echo "Coverage passed: ${COVERAGE}% is equal or greater than required ${GO_COVERAGE}%"
+        else
+            echo "Coverage failed: ${COVERAGE}% is less than required ${GO_COVERAGE}%"
+            exit 1
+        fi
     }
 
     if is_true "$GO_LINT_ENABLE"; then
