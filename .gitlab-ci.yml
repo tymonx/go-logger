@@ -255,7 +255,7 @@
         echo "Generating Go documentation..."
 
         # Setup
-        rm -rf "$GO_DOC_DIRECTORY/$GO_DOC_PREFIX"
+        rm -rf "$GO_DOC_OUTPUT"
 
         FILE=$(go env GOMOD)
 
@@ -286,7 +286,7 @@
             --execute=robots=off \
             --include-directories="/pkg,/lib" \
             --exclude-directories="*" \
-            --directory-prefix="$GO_DOC_DIRECTORY/$GO_DOC_PREFIX" \
+            --directory-prefix="$GO_DOC_OUTPUT" \
             --no-host-directories \
             "$URL" || STATUS=$?
 
@@ -357,8 +357,8 @@
         GO_DOCKER_IMAGE: golang
         GO_DOCKER_TAG: ${GO_VERSION}-alpine${GO_ALPINE_VERSION}
         GO_DOC_PREFIX: doc
+        GO_DOC_OUTPUT: public/${GO_DOC_PREFIX}
         GO_DOC_PATH: ""
-        GO_DOC_DIRECTORY: public
         GO_FORMAT_ENABLE: 0
         GO_BUILD_ENABLE: 0
         GO_LINT_ENABLE: 0
@@ -404,3 +404,5 @@ test:
 
 pages:
     extends: .go-doc
+    variables:
+        GO_DOC_PATH: logger
