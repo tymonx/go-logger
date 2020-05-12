@@ -132,11 +132,11 @@
         - *go-script
 
 .go-build:
-    extend: .go-base
+    extends: .go-base
     stage: build
     variables:
         GO_FORMAT_ENABLE: 1
         GO_LINT_ENABLE: 1
 
 build:
-    extend: .go-build
+    extends: .go-build
