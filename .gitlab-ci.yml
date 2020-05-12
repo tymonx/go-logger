@@ -1,0 +1,126 @@
+# Copyright 2020 Tymoteusz Blazejczyk
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+.go-common: &go-common |-
+    # Valid Go build
+
+    function strip {
+        # Strip variable from leading and trailing whitespaces
+        echo "$1" | sed -r -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+    }
+
+    function lower {
+        # Replace all characters from upper case to lower case
+        echo "$1" | tr '[:upper:]' '[:lower:]'
+    }
+
+    function is_true {
+        # Check if contains true
+        [[ $(lower "$1" | \
+            grep -cE '^(on|yes|true|enable|[1-9][0-9]*)$') -ne 0 ]]
+    }
+
+    function is_git {
+        # Is the git command available
+        command -v git 2>&1 >/dev/null
+    }
+
+    function is_golint {
+        # Is the golint command available
+        command -v golint 2>&1 >/dev/null
+    }
+
+    function is_apk {
+        # Is the apk command available
+        command -v apk 2>&1 >/dev/null
+    }
+
+    function install_git {
+        # Install the Git command
+        if ! is_git; then
+
+            # Alpine image
+            if is_apk; then
+                apk update --no-cache
+                apk add --no-cache git
+            else
+                echo "This image is not supported"
+                exit 1
+            fi
+        fi
+    }
+
+    function install_golint {
+        # Install the golint command
+        if ! is_golint; then
+            install_git
+            go get -u golang.org/x/lint/golint
+        fi
+    }
+
+.go-format: &go-format |-
+    function go_format {
+        # Go format
+        local FILES
+
+        echo "Checking if all Go source files are formatted correctly..."
+        FILES=$(gofmt -l ./)
+
+        if [[ -z "$FILES" ]]; then
+            echo "All Go source files are formatted correctly"
+        else
+            echo "Listing Go source files that are ill-formatted:"
+            echo "$FILES"
+            echo ""
+            echo "Detailed formatting information:"
+            echo "$(gofmt -l -e -d ./)"
+            exit 1
+        fi
+    }
+
+    if is_true "$GO_FORMAT_ENABLE"; then
+        GO_FORMAT_ENABLE=0
+
+        go_format
+    fi
+
+.go-lint: &go-lint |-
+    function go_lint {
+        # Go lint
+    }
+
+    if is_true "$GO_LINT_ENABLE"; then
+        GO_LINT_ENABLE=0
+
+        go_lint
+    fi
+
+build:
+    stage: build
+    variables:
+        GO_VERSION: 1.14.2
+        GO_ALPINE_VERSION: 3.11
+        GO_DOCKER_IMAGE: golang
+        GO_DOCKER_TAG: ${GO_VERSION}-alpine${GO_ALPINE_VERSION}
+        GO_FORMAT_ENABLE: 1
+        GO_LINT_ENABLE: 1
+    image: ${GO_DOCKER_IMAGE}:${GO_DOCKER_TAG}
+    before_script:
+        - *go-common
+        - *go-format
+        - *go-lint
+    script:
+        - *go-common
+        - *go-format
+        - *go-lint
