@@ -130,7 +130,7 @@
         install_gcc
 
         echo "Testing Go source files..."
-        OUTPUT=$(go test -v -cover ./... | tee /dev/tty)
+        OUTPUT=$(go test -v -cover ./... | tee /dev/stderr)
         echo "All Go source files are tested correctly"
 
         COVERAGE=$(echo "$OUTPUT" | sed -n -E 's/^coverage: ([0-9]+\.[0-9]+)% of statements$/\1/p')
