@@ -72,7 +72,7 @@
             # Alpine image
             if is_apk; then
                 apk update --no-cache
-                apk add --no-cache gcc
+                apk add --no-cache gcc libc-dev
             fi
         fi
     }
