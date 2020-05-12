@@ -25,6 +25,11 @@
         echo "$1" | tr '[:upper:]' '[:lower:]'
     }
 
+    function url_cleanup {
+        # URL cleanup. Removing double slashes
+        echo "$1" | sed -E 's,([^:]/)/+,\1,g'
+    }
+
     function is_true {
         # Check if contains true
         [[ $(lower "$1" | \
@@ -153,7 +158,7 @@
             mkdir -p "$(basename $FILE)"
 
             # Removing duplicated slashes '/'
-            URL=$(echo "$URL" | sed -E 's,([^:]/)/+,\1,g')
+            URL=$(url_cleanup "$URL")
 
             # Creating html file with redirection
             cat <<-EOF > "$FILE"
@@ -265,10 +270,10 @@
         fi
 
         # URL path to Go package and module documentation
-        URL="http://localhost:6060/pkg/$MODULE/"
+        URL=$(url_cleanup "http://$GO_DOC_HTTP/pkg/$MODULE/")
 
         # Starting godoc server
-        godoc &
+        godoc -http="$GO_DOC_HTTP" &
         PID=$!
 
         # Waiting for godoc server
@@ -359,6 +364,7 @@
         GO_DOC_PREFIX: doc
         GO_DOC_OUTPUT: public/${GO_DOC_PREFIX}
         GO_DOC_PATH: ""
+        GO_DOC_HTTP: "localhost:6060"
         GO_FORMAT_ENABLE: 0
         GO_BUILD_ENABLE: 0
         GO_LINT_ENABLE: 0
