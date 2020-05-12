@@ -36,6 +36,11 @@
         command -v git 2>&1 >/dev/null
     }
 
+    function is_gcc {
+        # Is the gcc command available
+        command -v gcc 2>&1 >/dev/null
+    }
+
     function is_golint {
         # Is the golint command available
         command -v golint 2>&1 >/dev/null
@@ -47,7 +52,7 @@
     }
 
     function install_git {
-        # Install the Git command
+        # Install the git command
         if ! is_git; then
             echo "The git command is missing. Installing the git command..."
 
@@ -55,9 +60,19 @@
             if is_apk; then
                 apk update --no-cache
                 apk add --no-cache git
-            else
-                echo "This image is not supported"
-                exit 1
+            fi
+        fi
+    }
+
+    function install_gcc {
+        # Install the gcc command
+        if ! is_gcc; then
+            echo "The gcc command is missing. Installing the gcc command..."
+
+            # Alpine image
+            if is_apk; then
+                apk update --no-cache
+                apk add --no-cache gcc
             fi
         fi
     }
@@ -109,6 +124,8 @@
 
     function go_test {
         # Go test
+        install_gcc
+
         echo "Testing Go source files..."
         go test -v -cover ./...
         echo "All Go source files are tested correctly"
@@ -116,6 +133,10 @@
 
     if is_true "$GO_LINT_ENABLE"; then
         install_golint
+    fi
+
+    if is_true "$GO_TEST_ENABLE"; then
+        install_gcc
     fi
 
     if is_true "$GO_FORMAT_ENABLE"; then
