@@ -185,7 +185,7 @@
         local FILES
 
         echo "Checking if Go source files are formatted correctly..."
-        FILES=$(gofmt -l ./)
+        FILES=$(gofmt -l ${GO_FORMAT_PATHS:-./})
 
         if [[ -z "$FILES" ]]; then
             echo "All Go source files are formatted correctly"
@@ -194,7 +194,7 @@
             echo "$FILES"
             echo ""
             echo "Detailed formatting information:"
-            echo "$(gofmt -l -e -d ./)"
+            echo "$(gofmt -l -e -d ${GO_FORMAT_PATHS:-./})"
             exit 1
         fi
     }
@@ -204,14 +204,14 @@
         install_golint
 
         echo "Linting Go source files..."
-        golint -set_exit_status ./...
+        golint -set_exit_status ${GO_LINT_PATHS:-./...}
         echo "All Go source files are linted correctly"
     }
 
     function go_build {
         # Go build
         echo "Building Go source files..."
-        go build ./...
+        go build ${GO_BUILD_PATHS:-./...}
         echo "All Go source files are built correctly"
     }
 
@@ -222,7 +222,7 @@
         install_gcc
 
         echo "Testing Go source files..."
-        go test -v -cover -coverprofile=coverage.out ./...
+        go test -v -cover -coverprofile=coverage.out ${GO_TEST_PATHS:-./...}
         echo "All Go source files are tested correctly"
 
         echo ""
@@ -361,15 +361,19 @@
         GO_ALPINE_VERSION: "3.11"
         GO_DOCKER_IMAGE: golang
         GO_DOCKER_TAG: ${GO_VERSION}-alpine${GO_ALPINE_VERSION}
+        GO_FORMAT_ENABLE: 0
+        GO_FORMAT_PATHS: ""
+        GO_BUILD_ENABLE: 0
+        GO_BUILD_PATHS: ""
+        GO_LINT_ENABLE: 0
+        GO_LINT_PATHS: ""
+        GO_TEST_ENABLE: 0
+        GO_TEST_PATHS: ""
+        GO_DOC_ENABLE: 0
         GO_DOC_PREFIX: doc
         GO_DOC_OUTPUT: public/${GO_DOC_PREFIX}
         GO_DOC_PATH: ""
         GO_DOC_HTTP: "localhost:6060"
-        GO_FORMAT_ENABLE: 0
-        GO_BUILD_ENABLE: 0
-        GO_LINT_ENABLE: 0
-        GO_TEST_ENABLE: 0
-        GO_DOC_ENABLE: 0
         GO_COVERAGE: 80
     image: ${GO_DOCKER_IMAGE}:${GO_DOCKER_TAG}
     before_script:
