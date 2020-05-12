@@ -46,6 +46,11 @@
         command -v golint 2>&1 >/dev/null
     }
 
+    function is_godoc {
+        # Is the godoc command available
+        command -v godoc 2>&1 >/dev/null
+    }
+
     function is_apk {
         # Is the apk command available
         command -v apk 2>&1 >/dev/null
@@ -84,6 +89,16 @@
 
             echo -n "The golint command is missing. Installing the golint command..."
             go get -u golang.org/x/lint/golint
+        fi
+    }
+
+    function install_godoc {
+        # Install the godoc command
+        if ! is_godoc; then
+            install_git
+
+            echo -n "The godoc command is missing. Installing the godoc command..."
+            go get -u golang.org/x/tools/cmd/godoc
         fi
     }
 
@@ -154,6 +169,7 @@
 
     function go_doc {
         # Go doc
+        install_godoc
 
         echo "Generating Go documentation..."
     }
@@ -164,6 +180,10 @@
 
     if is_true "$GO_TEST_ENABLE"; then
         install_gcc
+    fi
+
+    if is_true "$GO_DOC_ENABLE"; then
+        install_godoc
     fi
 
     if is_true "$GO_FORMAT_ENABLE"; then
