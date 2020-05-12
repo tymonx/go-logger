@@ -141,10 +141,13 @@
         COVERAGE=$(go tool cover -func=coverage.out | grep "total:")
         COVERAGE=$(echo "$COVERAGE" | sed -n -E 's/^\s*total:\s*\(statements\)\s*([0-9]+\.[0-9]+)%\s*$/\1/p')
 
+        echo "Coverage result: ${COVERAGE}%"
+        echo "Coverage threshold: ${GO_COVERAGE}%"
+
         if [[ 0 -eq $(echo "${COVERAGE} < ${GO_COVERAGE}" | bc) ]]; then
-            echo "Coverage passed: ${COVERAGE}% is equal or greater than required ${GO_COVERAGE}%"
+            echo "Coverage passed"
         else
-            echo "Coverage failed: ${COVERAGE}% is less than required ${GO_COVERAGE}%"
+            echo "Coverage failed"
             exit 1
         fi
     }
