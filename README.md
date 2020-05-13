@@ -64,6 +64,16 @@ func main() {
 }
 ```
 
+Example output:
+
+```
+2020-05-13 12:37:22,536 - Info     - main.go:28:main.main(): Hello from logger!
+2020-05-13 12:37:22,536 - Info     - main.go:29:main.main(): Automatic placeholders 1 2 3
+2020-05-13 12:37:22,536 - Info     - main.go:30:main.main(): Positional placeholders 3 2 1
+2020-05-13 12:37:22,536 - Info     - main.go:32:main.main(): Named placeholders 3 2 1
+2020-05-13 12:37:22,536 - Info     - main.go:38:main.main(): Object placeholders 3 2 1
+```
+
 ## Documentation
 
 Go logger [documentation](https://tymonx.gitlab.io/go-logger/doc/pkg/gitlab.com/tymonx/go-logger/logger/).
