@@ -14,7 +14,7 @@ Lightweight, fast and powerful logger implementation in Go.
 * Supporting automatic placeholders in log arguments with `{p}`
 * Supporting positional placeholders in log arguments with `{pN}`
 * Supporting named placeholders in log arguments with `{name}`, `{p.name}` or `{pN.name}`
-* Supporting object placeholders in log arguments with `{.field}`, `{p.field}` or `{pN.field}`
+* Supporting object placeholders in log arguments with `{.Field}`, `{p.Field}` or `{pN.Field}`
 * Supporting custom placeholder identification (default is `p`)
 * Supporting custom log handlers
 * Supporting custom log formatters
