@@ -22,6 +22,7 @@ import (
 func Example() {
 	logger := New()
 
+	// To make testing this example more consistent, date must be constant
 	for _, handler := range logger.GetHandlers() {
 		handler.GetFormatter().SetDateFormat("2020")
 	}
