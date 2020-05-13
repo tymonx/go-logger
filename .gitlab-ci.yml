@@ -28,6 +28,6 @@ test:
 pages:
     extends: .go-doc
     variables:
-        GO_DOC_PATH: logger
+        GO_DOC_PAGE_PATH: logger
     dependencies:
         - test
