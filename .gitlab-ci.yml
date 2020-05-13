@@ -14,7 +14,7 @@
 
 include:
     - project: 'tymonx/gitlab-ci'
-      ref: v0.32.1
+      ref: v0.32.2
       file: '/templates/generic/go.yml'
 
 build:
