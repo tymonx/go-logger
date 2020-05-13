@@ -10,11 +10,11 @@ Lightweight, fast and powerful logger implementation in Go.
 * Various customizable built-in log handlers `Stdout`, `Stderr`, `File`, `Stream` and `Syslog`
 * Various log methods `Trace`, `Debug`, `Info`, `Notice`, `Warning`, `Error`, `Critical`, `Alert`, `Fatal` and `Panic`
 * Flexible log message formatter with some predefined named placeholders
-* Use new created logger instance or use global one
-* Supporting automatic placeholders in log arguments with `{p}`
-* Supporting positional placeholders in log arguments with `{pN}`
-* Supporting named placeholders in log arguments with `{name}`, `{p.name}` or `{pN.name}`
-* Supporting object placeholders in log arguments with `{.Field}`, `{p.Field}` or `{pN.Field}`
+* Use new created logger instance or use the global one as `logger.*`
+* Supporting automatic placeholders for log arguments with `{p}`
+* Supporting positional placeholders for log arguments with `{pN}`
+* Supporting named placeholders for log arguments with `{name}`, `{p.name}` or `{pN.name}`
+* Supporting object placeholders for log arguments with `{.Field}`, `{p.Field}` or `{pN.Field}`
 * Supporting custom placeholder identification (default is `p`)
 * Supporting custom log handlers
 * Supporting custom log formatters
