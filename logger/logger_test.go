@@ -48,11 +48,11 @@ func Example() {
 	logger.Flush()
 
 	// Output:
-	// 2020 - Info     - logger_test.go:29:logger.Example(): Hello from logger!
-	// 2020 - Info     - logger_test.go:30:logger.Example(): Automatic placeholders 1 2 3
-	// 2020 - Info     - logger_test.go:31:logger.Example(): Positional placeholders 3 2 1
-	// 2020 - Info     - logger_test.go:33:logger.Example(): Named placeholders 3 2 1
-	// 2020 - Info     - logger_test.go:39:logger.Example(): Object placeholders 3 2 1
+	// 2020 - Info     - logger_test.go:30:logger.Example(): Hello from logger!
+	// 2020 - Info     - logger_test.go:31:logger.Example(): Automatic placeholders 1 2 3
+	// 2020 - Info     - logger_test.go:32:logger.Example(): Positional placeholders 3 2 1
+	// 2020 - Info     - logger_test.go:34:logger.Example(): Named placeholders 3 2 1
+	// 2020 - Info     - logger_test.go:40:logger.Example(): Object placeholders 3 2 1
 }
 
 func TestNew(test *testing.T) {
