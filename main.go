@@ -19,7 +19,26 @@ import (
 )
 
 func main() {
+	// The close method is needed because all log methods are offloaded to
+	// separate worker thread. The Close() function guarantees that all log
+	// messages will be flushed out and all log handlers will be properly closed
 	defer logger.Close()
 
-	logger.Info("Hello from logger {p} {p}", 3, 4)
+	logger.Info("Hello from logger!")
+	logger.Info("Automatic placeholders {p} {p} {p}", 1, 2, 3)
+	logger.Info("Positional placeholders {p2} {p1} {p0}", 1, 2, 3)
+
+	logger.Info("Named placeholders {z} {y} {x}", logger.Named{
+		"x": 1,
+		"y": 2,
+		"z": 3,
+	})
+
+	logger.Info("Object placeholders {.Z} {.Y} {.X}", struct {
+		X, Y, Z int
+	}{
+		X: 1,
+		Y: 2,
+		Z: 3,
+	})
 }
