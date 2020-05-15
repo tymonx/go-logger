@@ -17,6 +17,7 @@ package logger
 import (
 	"io"
 	"net"
+	"strconv"
 )
 
 // These constants define default values for syslog.
@@ -61,7 +62,7 @@ func NewSyslog() *Syslog {
 
 // Open opens new connection.
 func (s *Syslog) Open() (io.WriteCloser, error) {
-	return net.Dial(s.network, s.address)
+	return net.Dial(s.network, s.address+":"+strconv.Itoa(s.port))
 }
 
 // SetFormatter sets Formatter.
@@ -216,7 +217,7 @@ func (s *Syslog) setFormatterFuncs(formatter *Formatter) {
 			severity := 0
 
 			for i, level := range severities {
-				if level <= formatter.GetRecord().Level.Value {
+				if level <= s.stream.formatter.record.Level.Value {
 					severity = i
 					break
 				}
