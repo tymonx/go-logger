@@ -15,6 +15,7 @@
 package logger
 
 import (
+	"io"
 	"os"
 )
 
@@ -48,20 +49,8 @@ func NewFile() *File {
 }
 
 // Open file.
-func (f *File) Open() error {
-	writer, err := os.OpenFile(f.name, f.flags, f.mode)
-
-	if err != nil {
-		return NewRuntimeError("cannot open new file", err)
-	}
-
-	err = f.stream.SetWriter(writer)
-
-	if err != nil {
-		return NewRuntimeError("cannot set new writer", err)
-	}
-
-	return nil
+func (f *File) Open() (io.WriteCloser, error) {
+	return os.OpenFile(f.name, f.flags, f.mode)
 }
 
 // SetFormatter sets Formatter.

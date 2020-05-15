@@ -24,6 +24,7 @@ func main() {
 	// messages will be flushed out and all log handlers will be properly closed
 	defer logger.Close()
 
+	logger.AddHandler("file", logger.NewFile())
 	logger.Info("Hello from logger!")
 	logger.Info("Automatic placeholders {p} {p} {p}", 1, 2, 3)
 	logger.Info("Positional placeholders {p2} {p1} {p0}", 1, 2, 3)

@@ -23,7 +23,7 @@ import (
 
 // Opener implements Open method.
 type Opener interface {
-	Open() error
+	Open() (io.WriteCloser, error)
 }
 
 // A Stream represents a log handler object for logging messages using stream
@@ -157,29 +157,12 @@ func (s *Stream) GetLevelRange() (min, max int) {
 	return s.minimumLevel, s.maximumLevel
 }
 
-// SetWriter sets I/O writer object used for writing log messages.
-func (s *Stream) SetWriter(writer io.WriteCloser) error {
-	if s.writer != writer {
-		if s.canClose() {
-			err := s.writer.Close()
-
-			if err != nil {
-				return NewRuntimeError("cannot close stream", err)
-			}
-		}
-
-		s.writer = writer
-	}
-
-	return nil
-}
-
 // Emit logs messages from logger using I/O stream.
 func (s *Stream) Emit(record *Record) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if s.reopen && (s.opener != nil) {
+	if s.reopen {
 		if s.canClose() {
 			err := s.writer.Close()
 
@@ -190,13 +173,17 @@ func (s *Stream) Emit(record *Record) error {
 			s.writer = nil
 		}
 
-		err := s.opener.Open()
+		s.reopen = false
+	}
+
+	if (s.writer == nil) && (s.opener != nil) {
+		writer, err := s.opener.Open()
 
 		if err != nil {
 			return NewRuntimeError("cannot open stream", err)
 		}
 
-		s.reopen = false
+		s.writer = writer
 	}
 
 	if s.writer != nil {

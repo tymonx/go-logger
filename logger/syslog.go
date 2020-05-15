@@ -15,6 +15,7 @@
 package logger
 
 import (
+	"io"
 	"net"
 )
 
@@ -53,25 +54,14 @@ func NewSyslog() *Syslog {
 
 	s.setFormatterFuncs(s.stream.GetFormatter())
 	s.stream.GetFormatter().SetFormat(DefaultSyslogFormat)
+	s.stream.SetOpener(s)
 
 	return s
 }
 
 // Open opens new connection.
-func (s *Syslog) Open() error {
-	writer, err := net.Dial(s.network, s.address)
-
-	if err != nil {
-		return NewRuntimeError("cannot open new file", err)
-	}
-
-	err = s.stream.SetWriter(writer)
-
-	if err != nil {
-		return NewRuntimeError("cannot set new writer", err)
-	}
-
-	return nil
+func (s *Syslog) Open() (io.WriteCloser, error) {
+	return net.Dial(s.network, s.address)
 }
 
 // SetFormatter sets Formatter.
