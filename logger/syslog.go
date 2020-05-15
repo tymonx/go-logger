@@ -15,301 +15,201 @@
 package logger
 
 import (
-	"fmt"
 	"net"
-	"strconv"
-	"sync"
 )
 
-// These constants define default values for syslog
+// These constants define default values for syslog.
 const (
-	DefaultSyslogPort     = 514
-	DefaultSyslogVersion  = 1
-	DefaultSyslogNetwork  = "tcp"
-	DefaultSyslogAddress  = "localhost"
-	DefaultSyslogFormat   = "<{syslogPriority}>{syslogVersion} {iso8601} {address} {name} {pid} {id} - {file}:{line}:{function}(): {message}"
+	DefaultSyslogPort    = 514
+	DefaultSyslogVersion = 1
+	DefaultSyslogNetwork = "tcp"
+	DefaultSyslogAddress = "localhost"
+	DefaultSyslogFormat  = "<{syslogPriority}>{syslogVersion} {iso8601} {address} {name} {pid} {id} - " +
+		"{file}:{line}:{function}(): {message}"
 	DefaultSyslogFacility = 1
 )
 
 // A Syslog represents a log handler object for logging messages to running
-// Syslog server
+// Syslog server.
 type Syslog struct {
-	port         int
-	mutex        sync.RWMutex
-	version      int
-	network      string
-	address      string
-	facility     int
-	formatter    *Formatter
-	connection   net.Conn
-	minimumLevel int
-	maximumLevel int
-	reconnect    bool
+	port     int
+	version  int
+	network  string
+	address  string
+	facility int
+	stream   *Stream
 }
 
-// NewSyslog creates a new Syslog log handler object
+// NewSyslog creates a new Syslog log handler object.
 func NewSyslog() *Syslog {
-	syslog := &Syslog{
-		port:         DefaultSyslogPort,
-		version:      DefaultSyslogVersion,
-		network:      DefaultSyslogNetwork,
-		address:      DefaultSyslogAddress,
-		facility:     DefaultSyslogFacility,
-		formatter:    NewFormatter().SetFormat(DefaultSyslogFormat),
-		minimumLevel: MinimumLevel,
-		maximumLevel: MaximumLevel,
+	s := &Syslog{
+		port:     DefaultSyslogPort,
+		version:  DefaultSyslogVersion,
+		network:  DefaultSyslogNetwork,
+		address:  DefaultSyslogAddress,
+		facility: DefaultSyslogFacility,
+		stream:   NewStream(),
 	}
 
-	syslog.setFormatterFuncs()
+	s.setFormatterFuncs(s.stream.GetFormatter())
+	s.stream.GetFormatter().SetFormat(DefaultSyslogFormat)
 
-	return syslog
+	return s
 }
 
-// init registers Syslog log handler
-func init() {
-	RegisterHandler("syslog", func() Handler {
-		return NewSyslog()
-	})
+// Open opens new connection.
+func (s *Syslog) Open() error {
+	writer, err := net.Dial(s.network, s.address)
+
+	if err != nil {
+		return NewRuntimeError("cannot open new file", err)
+	}
+
+	err = s.stream.SetWriter(writer)
+
+	if err != nil {
+		return NewRuntimeError("cannot set new writer", err)
+	}
+
+	return nil
 }
 
-// SetFormatter sets Formatter
-func (syslog *Syslog) SetFormatter(formatter *Formatter) Handler {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
-
-	syslog.formatter = formatter
-
-	return syslog
+// SetFormatter sets Formatter.
+func (s *Syslog) SetFormatter(formatter *Formatter) Handler {
+	s.setFormatterFuncs(formatter)
+	return s.stream.SetFormatter(formatter)
 }
 
-// GetFormatter returns Formatter
-func (syslog *Syslog) GetFormatter() *Formatter {
-	syslog.mutex.RLock()
-	defer syslog.mutex.RUnlock()
-
-	return syslog.formatter
+// GetFormatter returns Formatter.
+func (s *Syslog) GetFormatter() *Formatter {
+	return s.stream.GetFormatter()
 }
 
-// SetMinimumLevel sets minimum log level
-func (syslog *Syslog) SetMinimumLevel(level int) Handler {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
-
-	syslog.minimumLevel = level
-
-	return syslog
+// SetMinimumLevel sets minimum log level.
+func (s *Syslog) SetMinimumLevel(level int) Handler {
+	return s.stream.SetMinimumLevel(level)
 }
 
-// GetMinimumLevel returns minimum log level
-func (syslog *Syslog) GetMinimumLevel() int {
-	syslog.mutex.RLock()
-	defer syslog.mutex.RUnlock()
-
-	return syslog.minimumLevel
+// GetMinimumLevel returns minimum log level.
+func (s *Syslog) GetMinimumLevel() int {
+	return s.stream.GetMinimumLevel()
 }
 
-// SetMaximumLevel sets maximum log level
-func (syslog *Syslog) SetMaximumLevel(level int) Handler {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
-
-	syslog.maximumLevel = level
-
-	return syslog
+// SetMaximumLevel sets maximum log level.
+func (s *Syslog) SetMaximumLevel(level int) Handler {
+	return s.stream.SetMaximumLevel(level)
 }
 
-// GetMaximumLevel returns maximum log level
-func (syslog *Syslog) GetMaximumLevel() int {
-	syslog.mutex.RLock()
-	defer syslog.mutex.RUnlock()
-
-	return syslog.maximumLevel
+// GetMaximumLevel returns maximum log level.
+func (s *Syslog) GetMaximumLevel() int {
+	return s.stream.GetMaximumLevel()
 }
 
-// SetLevelRange sets minimum and maximum log level values
-func (syslog *Syslog) SetLevelRange(min int, max int) Handler {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
-
-	syslog.minimumLevel = min
-	syslog.maximumLevel = max
-
-	return syslog
+// SetLevelRange sets minimum and maximum log level values.
+func (s *Syslog) SetLevelRange(min, max int) Handler {
+	return s.stream.SetLevelRange(min, max)
 }
 
-// GetLevelRange returns minimum and maximum log level values
-func (syslog *Syslog) GetLevelRange() (min int, max int) {
-	syslog.mutex.RLock()
-	defer syslog.mutex.RUnlock()
-
-	return syslog.minimumLevel, syslog.maximumLevel
+// GetLevelRange returns minimum and maximum log level values.
+func (s *Syslog) GetLevelRange() (min, max int) {
+	return s.stream.GetLevelRange()
 }
 
-// SetPort sets port number that is used to communicate with Syslog server
-func (syslog *Syslog) SetPort(port int) *Syslog {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
+// SetPort sets port number that is used to communicate with Syslog server.
+func (s *Syslog) SetPort(port int) *Syslog {
+	s.stream.Lock()
+	defer s.stream.Unlock()
 
 	if port <= 0 {
 		port = DefaultSyslogPort
 	}
 
-	if syslog.port != port {
-		syslog.port = port
-		syslog.reconnect = true
+	if s.port != port {
+		s.port = port
+		s.stream.Reopen()
 	}
 
-	return syslog
+	return s
 }
 
-// GetPort returns port number that is used to communicate with Syslog server
-func (syslog *Syslog) GetPort() int {
-	syslog.mutex.RLock()
-	defer syslog.mutex.RUnlock()
+// GetPort returns port number that is used to communicate with Syslog server.
+func (s *Syslog) GetPort() int {
+	s.stream.RLock()
+	defer s.stream.RUnlock()
 
-	return syslog.port
+	return s.port
 }
 
 // SetNetwork sets network type like "udp" or "tcp" that is used to communicate
-// with Syslog server
-func (syslog *Syslog) SetNetwork(network string) *Syslog {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
+// with Syslog server.
+func (s *Syslog) SetNetwork(network string) *Syslog {
+	s.stream.Lock()
+	defer s.stream.Unlock()
 
 	if network == "" {
 		network = DefaultSyslogNetwork
 	}
 
-	if syslog.network != network {
-		syslog.network = network
-		syslog.reconnect = true
+	if s.network != network {
+		s.network = network
+		s.stream.Reopen()
 	}
 
-	return syslog
+	return s
 }
 
 // GetNetwork returns network type like "udp" or "tcp" that is used to
-// communicate with Syslog server
-func (syslog *Syslog) GetNetwork() string {
-	syslog.mutex.RLock()
-	defer syslog.mutex.RUnlock()
+// communicate with Syslog server.
+func (s *Syslog) GetNetwork() string {
+	s.stream.RLock()
+	defer s.stream.RUnlock()
 
-	return syslog.network
+	return s.network
 }
 
 // SetAddress sets IP address or hostname that is used to communicate with
-// Syslog server
-func (syslog *Syslog) SetAddress(address string) *Syslog {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
+// Syslog server.
+func (s *Syslog) SetAddress(address string) *Syslog {
+	s.stream.Lock()
+	defer s.stream.Unlock()
 
 	if address == "" {
 		address = DefaultSyslogAddress
 	}
 
-	if syslog.address != address {
-		syslog.address = address
-		syslog.reconnect = true
+	if s.address != address {
+		s.address = address
+		s.stream.Reopen()
 	}
 
-	return syslog
+	return s
 }
 
 // GetAddress returns IP address or hostname that is used to communicate with
-// Syslog server
-func (syslog *Syslog) GetAddress() string {
-	syslog.mutex.RLock()
-	defer syslog.mutex.RUnlock()
+// Syslog server.
+func (s *Syslog) GetAddress() string {
+	s.stream.RLock()
+	defer s.stream.RUnlock()
 
-	return syslog.network
+	return s.network
 }
 
-// Emit logs messages from Logger to Syslog server
-func (syslog *Syslog) Emit(record *Record) error {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
-
-	if syslog.reconnect {
-		err := syslog.close()
-
-		if err != nil {
-			return NewRuntimeError("cannot close connection to syslog", err)
-		}
-
-		syslog.reconnect = false
-	}
-
-	if syslog.connection == nil {
-		err := syslog.connect()
-
-		if err != nil {
-			return NewRuntimeError("cannot open connection to syslog", err)
-		}
-	}
-
-	if syslog.connection != nil {
-		message, err := syslog.formatter.Format(record)
-
-		if err != nil {
-			return NewRuntimeError("cannot fomat record", err)
-		}
-
-		_, err = fmt.Fprintln(syslog.connection, message)
-
-		if err != nil {
-			return NewRuntimeError("cannot write to syslog", err)
-		}
-	}
-
-	return nil
+// Emit logs messages from Logger to Syslog server.
+func (s *Syslog) Emit(record *Record) error {
+	return s.stream.Emit(record)
 }
 
-// Close closes communication to Syslog server
-func (syslog *Syslog) Close() error {
-	syslog.mutex.Lock()
-	defer syslog.mutex.Unlock()
-
-	err := syslog.close()
-
-	if err != nil {
-		return NewRuntimeError("cannot close connection to syslog", err)
-	}
-
-	return nil
-}
-
-func (syslog *Syslog) connect() error {
-	var err error
-
-	syslog.connection, err = net.Dial(
-		syslog.network,
-		syslog.address+":"+strconv.Itoa(syslog.port),
-	)
-
-	if err != nil {
-		syslog.connection = nil
-	}
-
-	return err
-}
-
-func (syslog *Syslog) close() error {
-	var err error
-
-	if syslog.connection != nil {
-		err = syslog.connection.Close()
-		syslog.connection = nil
-	}
-
-	return err
+// Close closes communication to Syslog server.
+func (s *Syslog) Close() error {
+	return s.stream.Close()
 }
 
 // setFormatterFuncs sets template functions that are specific for Syslog log
-// messages
-func (syslog *Syslog) setFormatterFuncs() {
-	syslog.formatter.AddFuncs(map[string]interface{}{
+// messages.
+func (s *Syslog) setFormatterFuncs(formatter *Formatter) {
+	formatter.AddFuncs(map[string]interface{}{
 		"syslogVersion": func() int {
-			return syslog.version
+			return s.version
 		},
 		"syslogPriority": func() int {
 			severities := [8]int{
@@ -326,13 +226,13 @@ func (syslog *Syslog) setFormatterFuncs() {
 			severity := 0
 
 			for i, level := range severities {
-				if level <= syslog.formatter.GetRecord().Level.Value {
+				if level <= formatter.GetRecord().Level.Value {
 					severity = i
 					break
 				}
 			}
 
-			return ((0x1F & syslog.facility) << 3) | (0x07 & severity)
+			return ((0x1F & s.facility) << 3) | (0x07 & severity)
 		},
 	})
 }

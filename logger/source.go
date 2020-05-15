@@ -14,7 +14,10 @@
 
 package logger
 
-// IDGenerator type that returns generated ID used in log messages.
-type IDGenerator interface {
-	Generate() (id interface{}, err error)
+// Source defines log file information fields.
+type Source struct {
+	Function string `json:"function"`
+	Name     string `json:"name"`
+	Path     string `json:"-"`
+	Line     int    `json:"line"`
 }

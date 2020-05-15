@@ -20,30 +20,8 @@ import (
 	"time"
 )
 
-// Arguments defines log arguments
-type Arguments []interface{}
-
-// Level defines log level information fields
-type Level struct {
-	Value int    `json:"value"`
-	Name  string `json:"name"`
-}
-
-// Timestamp defines log timestamp information fields
-type Timestamp struct {
-	Created string `json:"created"`
-}
-
-// Source defines log file information fields
-type Source struct {
-	Function string `json:"function"`
-	Name     string `json:"name"`
-	Path     string `json:"-"`
-	Line     int    `json:"line"`
-}
-
 // Record defines log record fields created by Logger and it is used by
-// Formatter to format log message based on these fields
+// Formatter to format log message based on these fields.
 type Record struct {
 	ID        interface{} `json:"id"`
 	Type      string      `json:"type"`
@@ -59,20 +37,21 @@ type Record struct {
 	logger    *Logger
 }
 
-// GetIDNumber returns ID as number
-func (record *Record) GetIDNumber() (int, error) {
+// GetIDNumber returns ID as number.
+func (r *Record) GetIDNumber() (int, error) {
 	var id int
+
 	var err error
 
-	switch record.ID.(type) {
+	switch value := r.ID.(type) {
 	case string:
-		id, err = strconv.Atoi(record.ID.(string))
+		id, err = strconv.Atoi(value)
 
 		if err != nil {
 			return 0, NewRuntimeError("invalid ID conversion", err)
 		}
 	case int:
-		id = record.ID.(int)
+		id = value
 	default:
 		return 0, NewRuntimeError("invalid ID type", nil)
 	}
@@ -80,15 +59,15 @@ func (record *Record) GetIDNumber() (int, error) {
 	return id, nil
 }
 
-// GetIDString returns ID as string
-func (record *Record) GetIDString() (string, error) {
+// GetIDString returns ID as string.
+func (r *Record) GetIDString() (string, error) {
 	var id string
 
-	switch record.ID.(type) {
+	switch value := r.ID.(type) {
 	case string:
-		id = record.ID.(string)
+		id = value
 	case int:
-		id = strconv.Itoa(record.ID.(int))
+		id = strconv.Itoa(value)
 	default:
 		return "", NewRuntimeError("invalid ID type", nil)
 	}
@@ -96,19 +75,19 @@ func (record *Record) GetIDString() (string, error) {
 	return id, nil
 }
 
-// ToJSON packs data to JSON
-func (record *Record) ToJSON() ([]byte, error) {
-	return json.Marshal(record)
+// ToJSON packs data to JSON.
+func (r *Record) ToJSON() ([]byte, error) {
+	return json.Marshal(r)
 }
 
-// FromJSON unpacks data from JSON
-func (record *Record) FromJSON(data []byte) error {
-	return json.Unmarshal(data, record)
+// FromJSON unpacks data from JSON.
+func (r *Record) FromJSON(data []byte) error {
+	return json.Unmarshal(data, r)
 }
 
-// GetMessage returns formatted message
-func (record *Record) GetMessage() (string, error) {
-	message, err := NewFormatter().FormatMessage(record)
+// GetMessage returns formatted message.
+func (r *Record) GetMessage() (string, error) {
+	message, err := NewFormatter().FormatMessage(r)
 
 	if err != nil {
 		return "", NewRuntimeError("cannot get formatted message", err)
