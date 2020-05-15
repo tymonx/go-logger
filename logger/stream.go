@@ -17,20 +17,28 @@ package logger
 import (
 	"fmt"
 	"io"
+	"os"
 	"sync"
 )
 
+// Opener implements Open method.
+type Opener interface {
+	Open() error
+}
+
 // A Stream represents a log handler object for logging messages using stream
-// object
+// object.
 type Stream struct {
 	writer       io.WriteCloser
 	formatter    *Formatter
 	mutex        sync.RWMutex
+	opener       Opener
 	minimumLevel int
 	maximumLevel int
+	reopen       bool
 }
 
-// NewStream creates a new Stream log handler object
+// NewStream creates a new Stream log handler object.
 func NewStream() *Stream {
 	return &Stream{
 		formatter:    NewFormatter(),
@@ -39,112 +47,166 @@ func NewStream() *Stream {
 	}
 }
 
-// init registers Stream log handler
-func init() {
-	RegisterHandler("stream", func() Handler {
-		return NewStream()
-	})
+// Lock locks stream.
+func (s *Stream) Lock() {
+	s.mutex.Lock()
 }
 
-// SetFormatter sets Formatter
-func (stream *Stream) SetFormatter(formatter *Formatter) Handler {
-	stream.mutex.Lock()
-	defer stream.mutex.Unlock()
-
-	stream.formatter = formatter
-
-	return stream
+// Unlock locks stream.
+func (s *Stream) Unlock() {
+	s.mutex.Unlock()
 }
 
-// GetFormatter returns Formatter
-func (stream *Stream) GetFormatter() *Formatter {
-	stream.mutex.RLock()
-	defer stream.mutex.RUnlock()
-
-	return stream.formatter
+// RLock locks stream.
+func (s *Stream) RLock() {
+	s.mutex.RLock()
 }
 
-// SetMinimumLevel sets minimum log level
-func (stream *Stream) SetMinimumLevel(level int) Handler {
-	stream.mutex.Lock()
-	defer stream.mutex.Unlock()
-
-	stream.minimumLevel = level
-
-	return stream
+// RUnlock locks stream.
+func (s *Stream) RUnlock() {
+	s.mutex.RUnlock()
 }
 
-// GetMinimumLevel returns minimum log level
-func (stream *Stream) GetMinimumLevel() int {
-	stream.mutex.RLock()
-	defer stream.mutex.RUnlock()
+// SetOpener sets opener interface.
+func (s *Stream) SetOpener(opener Opener) *Stream {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	return stream.minimumLevel
+	s.opener = opener
+
+	return s
 }
 
-// SetMaximumLevel sets maximum log level
-func (stream *Stream) SetMaximumLevel(level int) Handler {
-	stream.mutex.Lock()
-	defer stream.mutex.Unlock()
+// Reopen reopens stream.
+func (s *Stream) Reopen() *Stream {
+	s.reopen = true
 
-	stream.maximumLevel = level
-
-	return stream
+	return s
 }
 
-// GetMaximumLevel returns maximum log level
-func (stream *Stream) GetMaximumLevel() int {
-	stream.mutex.RLock()
-	defer stream.mutex.RUnlock()
+// SetFormatter sets Formatter.
+func (s *Stream) SetFormatter(formatter *Formatter) Handler {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	return stream.maximumLevel
+	s.formatter = formatter
+
+	return s
 }
 
-// SetLevelRange sets minimum and maximum log level values
-func (stream *Stream) SetLevelRange(min int, max int) Handler {
-	stream.mutex.Lock()
-	defer stream.mutex.Unlock()
+// GetFormatter returns Formatter.
+func (s *Stream) GetFormatter() *Formatter {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	stream.minimumLevel = min
-	stream.maximumLevel = max
-
-	return stream
+	return s.formatter
 }
 
-// GetLevelRange returns minimum and maximum log level values
-func (stream *Stream) GetLevelRange() (min int, max int) {
-	stream.mutex.RLock()
-	defer stream.mutex.RUnlock()
+// SetMinimumLevel sets minimum log level.
+func (s *Stream) SetMinimumLevel(level int) Handler {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	return stream.minimumLevel, stream.maximumLevel
+	s.minimumLevel = level
+
+	return s
 }
 
-// SetWriter sets I/O writer object used for writing log messages
-func (stream *Stream) SetWriter(writer io.WriteCloser) *Stream {
-	stream.mutex.Lock()
-	defer stream.mutex.Unlock()
+// GetMinimumLevel returns minimum log level.
+func (s *Stream) GetMinimumLevel() int {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 
-	if stream.writer != writer {
-		stream.close()
-		stream.writer = writer
+	return s.minimumLevel
+}
+
+// SetMaximumLevel sets maximum log level.
+func (s *Stream) SetMaximumLevel(level int) Handler {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.maximumLevel = level
+
+	return s
+}
+
+// GetMaximumLevel returns maximum log level.
+func (s *Stream) GetMaximumLevel() int {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return s.maximumLevel
+}
+
+// SetLevelRange sets minimum and maximum log level values.
+func (s *Stream) SetLevelRange(min, max int) Handler {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.minimumLevel = min
+	s.maximumLevel = max
+
+	return s
+}
+
+// GetLevelRange returns minimum and maximum log level values.
+func (s *Stream) GetLevelRange() (min, max int) {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return s.minimumLevel, s.maximumLevel
+}
+
+// SetWriter sets I/O writer object used for writing log messages.
+func (s *Stream) SetWriter(writer io.WriteCloser) error {
+	if s.writer != writer {
+		if s.canClose() {
+			err := s.writer.Close()
+
+			if err != nil {
+				return NewRuntimeError("cannot close stream", err)
+			}
+		}
+
+		s.writer = writer
 	}
 
-	return stream
+	return nil
 }
 
-// Emit logs messages from logger using I/O stream
-func (stream *Stream) Emit(record *Record) error {
-	stream.mutex.Lock()
-	defer stream.mutex.Unlock()
+// Emit logs messages from logger using I/O stream.
+func (s *Stream) Emit(record *Record) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	if stream.writer != nil {
-		message, err := stream.formatter.Format(record)
+	if s.reopen && (s.opener != nil) {
+		if s.canClose() {
+			err := s.writer.Close()
+
+			if err != nil {
+				return NewRuntimeError("cannot close stream", err)
+			}
+
+			s.writer = nil
+		}
+
+		err := s.opener.Open()
+
+		if err != nil {
+			return NewRuntimeError("cannot open stream", err)
+		}
+
+		s.reopen = false
+	}
+
+	if s.writer != nil {
+		message, err := s.formatter.Format(record)
 
 		if err != nil {
 			return NewRuntimeError("cannot format record", err)
 		}
 
-		_, err = fmt.Fprintln(stream.writer, message)
+		_, err = fmt.Fprintln(s.writer, message)
 
 		if err != nil {
 			return NewRuntimeError("cannot write to stream", err)
@@ -154,27 +216,24 @@ func (stream *Stream) Emit(record *Record) error {
 	return nil
 }
 
-// Close closes I/O stream
-func (stream *Stream) Close() error {
-	stream.mutex.Lock()
-	defer stream.mutex.Unlock()
+// Close closes I/O stream.
+func (s *Stream) Close() error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
-	err := stream.close()
+	if s.canClose() {
+		err := s.writer.Close()
 
-	if err != nil {
-		return NewRuntimeError("cannot close stream", err)
+		if err != nil {
+			return NewRuntimeError("cannot close stream", err)
+		}
+
+		s.writer = nil
 	}
 
 	return nil
 }
 
-func (stream *Stream) close() error {
-	var err error
-
-	if stream.writer != nil {
-		err = stream.writer.Close()
-		stream.writer = nil
-	}
-
-	return err
+func (s *Stream) canClose() bool {
+	return (s.writer != nil) && (s.writer != os.Stdin) && (s.writer != os.Stdout) && (s.writer != os.Stderr)
 }

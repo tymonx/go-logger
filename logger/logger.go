@@ -29,7 +29,7 @@ import (
 
 // These constants define log level values and names used by various logger
 // functions like for example Debug or Info. It defines also default logger
-// values
+// values.
 const (
 	OffsetLevel = 10
 
@@ -61,14 +61,15 @@ const (
 	DefaultTypeName = "log"
 
 	DefaultErrorCode = 1
+
+	loggerSkipCall = 3
 )
 
 // A Logger represents an active logging object that generates log messages for
 // different added log handlers. Each logging operations creates and sends
 // lightweight not formatted log message to separate worker thread. It offloads
-// main code from unnecessary resource consuming formatting and I/O operations
+// main code from unnecessary resource consuming formatting and I/O operations.
 type Logger struct {
-	tag         string
 	name        string
 	handlers    Handlers
 	idGenerator IDGenerator
@@ -76,7 +77,7 @@ type Logger struct {
 	mutex       sync.RWMutex
 }
 
-// New creates new logger instance with default handlers
+// New creates new logger instance with default handlers.
 func New() *Logger {
 	return &Logger{
 		handlers: Handlers{
@@ -89,76 +90,68 @@ func New() *Logger {
 }
 
 // SetErrorCode sets error code that is returned during Fatal call.
-// On default it is 1
-func (logger *Logger) SetErrorCode(errorCode int) *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// On default it is 1.
+func (l *Logger) SetErrorCode(errorCode int) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	logger.errorCode = errorCode
-	return logger
+	l.errorCode = errorCode
+
+	return l
 }
 
-// GetErrorCode returns error code
-func (logger *Logger) GetErrorCode() int {
-	logger.mutex.RLock()
-	defer logger.mutex.RUnlock()
+// GetErrorCode returns error code.
+func (l *Logger) GetErrorCode() int {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	return logger.errorCode
+	return l.errorCode
 }
 
-// SetName sets logger name
-func (logger *Logger) SetName(name string) *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// SetName sets logger name.
+func (l *Logger) SetName(name string) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	logger.name = name
-	return logger
+	l.name = name
+
+	return l
 }
 
-// GetName returns logger name
-func (logger *Logger) GetName() string {
-	logger.mutex.RLock()
-	defer logger.mutex.RUnlock()
+// GetName returns logger name.
+func (l *Logger) GetName() string {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	return logger.name
+	return l.name
 }
 
-// AddHandler sets log handler under provided identifier name
-func (logger *Logger) AddHandler(name string, handler Handler) *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// AddHandler sets log handler under provided identifier name.
+func (l *Logger) AddHandler(name string, handler Handler) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	logger.handlers[name] = handler
-	return logger
+	l.handlers[name] = handler
+
+	return l
 }
 
-// CreateAddHandler it creates registered log handler by provided name and it
-// sets for logger
-func (logger *Logger) CreateAddHandler(name string) error {
-	handler, err := CreateHandler(name)
+// SetHandlers sets log handlers for logger.
+func (l *Logger) SetHandlers(handlers Handlers) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	if err == nil {
-		logger.AddHandler(name, handler)
-	}
+	l.handlers = handlers
 
-	return err
+	return l
 }
 
-// SetHandlers sets log handlers for logger
-func (logger *Logger) SetHandlers(handlers Handlers) *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// GetHandler returns added log handler by provided name.
+func (l *Logger) GetHandler(name string) (Handler, error) {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	logger.handlers = handlers
-	return logger
-}
-
-// GetHandler returns added log handler by provided name
-func (logger *Logger) GetHandler(name string) (Handler, error) {
-	logger.mutex.RLock()
-	defer logger.mutex.RUnlock()
-
-	handler, ok := logger.handlers[name]
+	handler, ok := l.handlers[name]
 
 	if !ok {
 		return nil, NewRuntimeError("cannot get handler"+name, nil)
@@ -167,194 +160,185 @@ func (logger *Logger) GetHandler(name string) (Handler, error) {
 	return handler, nil
 }
 
-// GetHandlers returns all added log handlers
-func (logger *Logger) GetHandlers() Handlers {
-	logger.mutex.RLock()
-	defer logger.mutex.RUnlock()
+// GetHandlers returns all added log handlers.
+func (l *Logger) GetHandlers() Handlers {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	return logger.handlers
+	return l.handlers
 }
 
-// RemoveHandler removes added log handler by provided name
-func (logger *Logger) RemoveHandler(name string) *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// RemoveHandler removes added log handler by provided name.
+func (l *Logger) RemoveHandler(name string) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	delete(logger.handlers, name)
-	return logger
+	delete(l.handlers, name)
+
+	return l
 }
 
-// RemoveHandlers removes all added log handlers
-func (logger *Logger) RemoveHandlers() *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// RemoveHandlers removes all added log handlers.
+func (l *Logger) RemoveHandlers() *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	logger.handlers = make(Handlers)
-	return logger
+	l.handlers = make(Handlers)
+
+	return l
 }
 
-// ResetHandlers sets logger default log handlers
-func (logger *Logger) ResetHandlers() *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// ResetHandlers sets logger default log handlers.
+func (l *Logger) ResetHandlers() *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	logger.handlers = Handlers{
+	l.handlers = Handlers{
 		"stdout": NewStdout(),
 		"stderr": NewStderr(),
 	}
 
-	return logger
+	return l
 }
 
-// Reset resets logger to default state and default log handlers
-func (logger *Logger) Reset() *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// Reset resets logger to default state and default log handlers.
+func (l *Logger) Reset() *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	logger.idGenerator = NewUUID4()
-	logger.errorCode = DefaultErrorCode
-	logger.handlers = Handlers{
+	l.idGenerator = NewUUID4()
+	l.errorCode = DefaultErrorCode
+	l.handlers = Handlers{
 		"stdout": NewStdout(),
 		"stderr": NewStderr(),
 	}
 
-	return logger
+	return l
 }
 
 // SetIDGenerator sets ID generator function that is called by logger to
-// generate ID for created log messages
-func (logger *Logger) SetIDGenerator(idGenerator IDGenerator) *Logger {
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+// generate ID for created log messages.
+func (l *Logger) SetIDGenerator(idGenerator IDGenerator) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
-	logger.idGenerator = idGenerator
-	return logger
+	l.idGenerator = idGenerator
+
+	return l
 }
 
 // GetIDGenerator returns ID generator function that is called by logger to
-// generate ID for created log messages
-func (logger *Logger) GetIDGenerator() IDGenerator {
-	logger.mutex.RLock()
-	defer logger.mutex.RUnlock()
+// generate ID for created log messages.
+func (l *Logger) GetIDGenerator() IDGenerator {
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	return logger.idGenerator
-}
-
-// CreateSetIDGenerator it creates registered ID generator function by provided
-// name and it sets for logger
-func (logger *Logger) CreateSetIDGenerator(name string) error {
-	idGenerator, err := CreateIDGenerator(name)
-
-	if err == nil {
-		logger.SetIDGenerator(idGenerator)
-	}
-
-	return err
+	return l.idGenerator
 }
 
 // Trace logs finer-grained informational messages than the Debug. It creates
 // and sends lightweight not formatted log messages to separate running logger
 // thread for further formatting and I/O handling from different added log
-// handlers
-func (logger *Logger) Trace(message string, arguments ...interface{}) {
-	logger.logMessage(TraceLevel, TraceName, message, arguments...)
+// handlers.
+func (l *Logger) Trace(message string, arguments ...interface{}) {
+	l.logMessage(TraceLevel, TraceName, message, arguments...)
 }
 
 // Debug logs debugging messages. It creates and sends lightweight not formatted
 // log messages to separate running logger thread for further formatting and
-// I/O handling from different added log handlers
-func (logger *Logger) Debug(message string, arguments ...interface{}) {
-	logger.logMessage(DebugLevel, DebugName, message, arguments...)
+// I/O handling from different added log handlers.
+func (l *Logger) Debug(message string, arguments ...interface{}) {
+	l.logMessage(DebugLevel, DebugName, message, arguments...)
 }
 
 // Info logs informational messages. It creates and sends lightweight not
 // formatted log messages to separate running logger thread for further
-// formatting and I/O handling from different added log handlers
-func (logger *Logger) Info(message string, arguments ...interface{}) {
-	logger.logMessage(InfoLevel, InfoName, message, arguments...)
+// formatting and I/O handling from different added log handlers.
+func (l *Logger) Info(message string, arguments ...interface{}) {
+	l.logMessage(InfoLevel, InfoName, message, arguments...)
 }
 
 // Notice logs messages for significant conditions. It creates and sends
 // lightweight not formatted log messages to separate running logger thread for
-// further formatting and I/O handling from different added log handlers
-func (logger *Logger) Notice(message string, arguments ...interface{}) {
-	logger.logMessage(NoticeLevel, NoticeName, message, arguments...)
+// further formatting and I/O handling from different added log handlers.
+func (l *Logger) Notice(message string, arguments ...interface{}) {
+	l.logMessage(NoticeLevel, NoticeName, message, arguments...)
 }
 
 // Warning logs messages for warning conditions that can be potentially harmful.
 // It creates and sends lightweight not formatted log messages to separate
 // running logger thread for further formatting and I/O handling from different
-// added log handlers
-func (logger *Logger) Warning(message string, arguments ...interface{}) {
-	logger.logMessage(WarningLevel, WarningName, message, arguments...)
+// added log handlers.
+func (l *Logger) Warning(message string, arguments ...interface{}) {
+	l.logMessage(WarningLevel, WarningName, message, arguments...)
 }
 
 // Error logs messages for error conditions. It creates and sends lightweight
 // not formatted log messages to separate running logger thread for further
-// formatting and I/O handling from different log handlers
-func (logger *Logger) Error(message string, arguments ...interface{}) {
-	logger.logMessage(ErrorLevel, ErrorName, message, arguments...)
+// formatting and I/O handling from different log handlers.
+func (l *Logger) Error(message string, arguments ...interface{}) {
+	l.logMessage(ErrorLevel, ErrorName, message, arguments...)
 }
 
 // Critical logs messages for critical conditions. It creates and sends
 // lightweight not formatted log messages to separate running logger thread for
-// further formatting and I/O handling from different added log handlers
-func (logger *Logger) Critical(message string, arguments ...interface{}) {
-	logger.logMessage(CriticalLevel, CriticalName, message, arguments...)
+// further formatting and I/O handling from different added log handlers.
+func (l *Logger) Critical(message string, arguments ...interface{}) {
+	l.logMessage(CriticalLevel, CriticalName, message, arguments...)
 }
 
 // Alert logs messages for alert conditions. It creates and sends lightweight
 // not formatted log messages to separate running logger thread for further
-// formatting and I/O handling from different added log handlers
-func (logger *Logger) Alert(message string, arguments ...interface{}) {
-	logger.logMessage(AlertLevel, AlertName, message, arguments...)
+// formatting and I/O handling from different added log handlers.
+func (l *Logger) Alert(message string, arguments ...interface{}) {
+	l.logMessage(AlertLevel, AlertName, message, arguments...)
 }
 
 // Fatal logs messages for fatal conditions. It stops logger worker thread and
 // it exists the application with an error code. It creates and sends
 // lightweight not formatted log messages to separate running logger thread for
-// further formatting and I/O handling from different added log handlers
-func (logger *Logger) Fatal(message string, arguments ...interface{}) {
-	logger.logMessage(FatalLevel, FatalName, message, arguments...)
+// further formatting and I/O handling from different added log handlers.
+func (l *Logger) Fatal(message string, arguments ...interface{}) {
+	l.logMessage(FatalLevel, FatalName, message, arguments...)
 	Close()
-	os.Exit(logger.errorCode)
+	os.Exit(l.errorCode) // revive:disable-line
 }
 
 // Panic logs messages for fatal conditions. It stops logger worker thread and
 // it exists the application with a panic. It creates and sends lightweight not
 // formatted log messages to separate running logger thread for further
-// formatting and I/O handling from different added log handlers
-func (logger *Logger) Panic(message string, arguments ...interface{}) {
-	logger.logMessage(PanicLevel, PanicName, message, arguments...)
+// formatting and I/O handling from different added log handlers.
+func (l *Logger) Panic(message string, arguments ...interface{}) {
+	l.logMessage(PanicLevel, PanicName, message, arguments...)
 	Close()
-	panic(message)
+	panic(NewRuntimeError("Panic error", nil))
 }
 
 // Log logs messages with user defined log level value and name. It creates and
 // sends lightweight not formatted log messages to separate running logger
 // thread for further formatting and I/O handling from different added log
-// handlers
-func (logger *Logger) Log(level int, levelName string, message string, arguments ...interface{}) {
-	logger.logMessage(level, levelName, message, arguments...)
+// handlers.
+func (l *Logger) Log(level int, levelName, message string, arguments ...interface{}) {
+	l.logMessage(level, levelName, message, arguments...)
 }
 
-// Flush flushes all log messages
-func (logger *Logger) Flush() *Logger {
+// Flush flushes all log messages.
+func (l *Logger) Flush() *Logger {
 	GetWorker().Flush()
 
-	return logger
+	return l
 }
 
-// Close closes all added log handlers
-func (logger *Logger) Close() error {
+// Close closes all added log handlers.
+func (l *Logger) Close() error {
 	GetWorker().Flush()
 
-	logger.mutex.Lock()
-	defer logger.mutex.Unlock()
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
 
 	var err error
 
-	for _, handler := range logger.handlers {
+	for _, handler := range l.handlers {
 		handlerError := handler.Close()
 
 		if handlerError != nil {
@@ -369,10 +353,10 @@ func (logger *Logger) Close() error {
 // logMessage logs message with defined log level value and name. It creates and
 // sends lightweight not formatted log messages to separate running logger
 // thread for further formatting and I/O handling from different added log
-// handlers
-func (logger *Logger) logMessage(level int, levelName string, message string, arguments ...interface{}) {
+// handlers.
+func (l *Logger) logMessage(level int, levelName, message string, arguments ...interface{}) {
 	now := time.Now()
-	path, line, function := getPathLineFunction(3)
+	path, line, function := getPathLineFunction(loggerSkipCall)
 
 	GetWorker().records <- &Record{
 		Time:      now,
@@ -387,13 +371,13 @@ func (logger *Logger) logMessage(level int, levelName string, message string, ar
 			Path:     path,
 			Function: function,
 		},
-		logger: logger,
+		logger: l,
 	}
 }
 
 // emit prepares provided log record and it dispatches to all added log
-// handlers for further formatting and specific I/O implementation operations
-func (logger *Logger) emit(record *Record) {
+// handlers for further formatting and specific I/O implementation operations.
+func (l *Logger) emit(record *Record) {
 	var err error
 
 	record.Type = DefaultTypeName
@@ -413,11 +397,11 @@ func (logger *Logger) emit(record *Record) {
 		printError(NewRuntimeError("cannot get local hostname", err))
 	}
 
-	logger.mutex.RLock()
-	defer logger.mutex.RUnlock()
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
-	record.Name = logger.name
-	record.ID, err = logger.idGenerator.Generate()
+	record.Name = l.name
+	record.ID, err = l.idGenerator.Generate()
 
 	if err != nil {
 		printError(NewRuntimeError("cannot generate ID", err))
@@ -427,7 +411,7 @@ func (logger *Logger) emit(record *Record) {
 		record.Name = filepath.Base(os.Args[0])
 	}
 
-	for _, handler := range logger.handlers {
+	for _, handler := range l.handlers {
 		min, max := handler.GetLevelRange()
 
 		if (record.Level.Value >= min) && (record.Level.Value <= max) {

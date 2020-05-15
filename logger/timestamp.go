@@ -14,7 +14,7 @@
 
 package logger
 
-// IDGenerator type that returns generated ID used in log messages.
-type IDGenerator interface {
-	Generate() (id interface{}, err error)
+// Timestamp defines log timestamp information fields.
+type Timestamp struct {
+	Created string `json:"created"`
 }

@@ -14,11 +14,7 @@
 
 package logger
 
-import (
-	"sync"
-)
-
-// Handler defines interface for log handlers
+// Handler defines interface for log handlers.
 type Handler interface {
 	SetFormatter(formatter *Formatter) Handler
 
@@ -32,46 +28,14 @@ type Handler interface {
 
 	GetMaximumLevel() int
 
-	SetLevelRange(min int, max int) Handler
+	SetLevelRange(min, max int) Handler
 
-	GetLevelRange() (min int, max int)
+	GetLevelRange() (min, max int)
 
 	Emit(record *Record) error
 
 	Close() error
 }
 
-// Handlers defines map of log handlers
+// Handlers defines map of log handlers.
 type Handlers map[string]Handler
-
-// HandlerConstructor creates specific log handler
-type HandlerConstructor func() Handler
-
-var gHandlerConstructors = make(map[string]HandlerConstructor)
-var gHandlerMutex sync.RWMutex
-
-// RegisterHandler registers log handler under provided name
-func RegisterHandler(name string, constructor HandlerConstructor) {
-	gHandlerMutex.Lock()
-	defer gHandlerMutex.Unlock()
-
-	gHandlerConstructors[name] = constructor
-}
-
-// CreateHandler creates registered log handler by provided name
-func CreateHandler(name string) (Handler, error) {
-	var handler Handler
-
-	gHandlerMutex.RLock()
-	defer gHandlerMutex.RUnlock()
-
-	constructor, ok := gHandlerConstructors[name]
-
-	if ok {
-		handler = constructor()
-	} else {
-		return nil, NewRuntimeError("cannot create log handler "+name, nil)
-	}
-
-	return handler, nil
-}

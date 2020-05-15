@@ -19,8 +19,12 @@ import (
 	"path/filepath"
 )
 
+const (
+	runtimeErrorSkipCall = 2
+)
+
 // RuntimeError defines runtime error with returned error message, file name,
-// file line number and function name
+// file line number and function name.
 type RuntimeError struct {
 	line     int
 	file     string
@@ -29,9 +33,9 @@ type RuntimeError struct {
 	err      error
 }
 
-// NewRuntimeError creates new RuntimeError object
+// NewRuntimeError creates new RuntimeError object.
 func NewRuntimeError(message string, err error) *RuntimeError {
-	path, line, function := getPathLineFunction(2)
+	path, line, function := getPathLineFunction(runtimeErrorSkipCall)
 
 	return &RuntimeError{
 		line:     line,
@@ -43,23 +47,23 @@ func NewRuntimeError(message string, err error) *RuntimeError {
 }
 
 // Error returns formatted error string with message, file name, file line
-// number and function name
-func (runtimeError *RuntimeError) Error() string {
+// number and function name.
+func (r *RuntimeError) Error() string {
 	message := fmt.Sprintf("%s:%d:%s(): %s",
-		runtimeError.file,
-		runtimeError.line,
-		runtimeError.function,
-		runtimeError.message,
+		r.file,
+		r.line,
+		r.function,
+		r.message,
 	)
 
-	if runtimeError.err != nil {
-		message = fmt.Sprintf("%s: %v", message, runtimeError.err)
+	if r.err != nil {
+		message = fmt.Sprintf("%s: %v", message, r.err)
 	}
 
 	return message
 }
 
-// Unwrap wrapped error
-func (runtimeError *RuntimeError) Unwrap() error {
-	return runtimeError.err
+// Unwrap wrapped error.
+func (r *RuntimeError) Unwrap() error {
+	return r.err
 }

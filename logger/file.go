@@ -15,259 +15,164 @@
 package logger
 
 import (
-	"fmt"
 	"os"
-	"sync"
 )
 
-// These constants define default values for File log handler
+// These constants define default values for File log handler.
 const (
 	DefaultFileName  = "log"
 	DefaultFileMode  = 0644
 	DefaultFileFlags = os.O_CREATE | os.O_APPEND | os.O_WRONLY
 )
 
-// A File represents a log handler object for logging messages to file
+// A File represents a log handler object for logging messages to file.
 type File struct {
-	name         string
-	mode         os.FileMode
-	flags        int
-	mutex        sync.RWMutex
-	handler      *os.File
-	formatter    *Formatter
-	minimumLevel int
-	maximumLevel int
-	reopen       bool
+	name   string
+	stream *Stream
+	flags  int
+	mode   os.FileMode
 }
 
-// NewFile creates a new File log handler object
+// NewFile creates a new File log handler object.
 func NewFile() *File {
-	return &File{
-		name:         DefaultFileName,
-		mode:         DefaultFileMode,
-		flags:        DefaultFileFlags,
-		formatter:    NewFormatter(),
-		minimumLevel: MinimumLevel,
-		maximumLevel: MaximumLevel,
-	}
-}
-
-// init registers File log handler
-func init() {
-	RegisterHandler("file", func() Handler {
-		return NewFile()
-	})
-}
-
-// SetFormatter sets Formatter
-func (file *File) SetFormatter(formatter *Formatter) Handler {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	file.formatter = formatter
-
-	return file
-}
-
-// GetFormatter returns Formatter
-func (file *File) GetFormatter() *Formatter {
-	file.mutex.RLock()
-	defer file.mutex.RUnlock()
-
-	return file.formatter
-}
-
-// SetMinimumLevel sets minimum log level
-func (file *File) SetMinimumLevel(level int) Handler {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	file.minimumLevel = level
-
-	return file
-}
-
-// GetMinimumLevel returns minimum log level
-func (file *File) GetMinimumLevel() int {
-	file.mutex.RLock()
-	defer file.mutex.RUnlock()
-
-	return file.minimumLevel
-}
-
-// SetMaximumLevel sets maximum log level
-func (file *File) SetMaximumLevel(level int) Handler {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	file.maximumLevel = level
-
-	return file
-}
-
-// GetMaximumLevel returns maximum log level
-func (file *File) GetMaximumLevel() int {
-	file.mutex.RLock()
-	defer file.mutex.RUnlock()
-
-	return file.maximumLevel
-}
-
-// SetLevelRange sets minimum and maximum log level values
-func (file *File) SetLevelRange(min int, max int) Handler {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	file.minimumLevel = min
-	file.maximumLevel = max
-
-	return file
-}
-
-// GetLevelRange returns minimum and maximum log level values
-func (file *File) GetLevelRange() (min int, max int) {
-	file.mutex.RLock()
-	defer file.mutex.RUnlock()
-
-	return file.minimumLevel, file.maximumLevel
-}
-
-// SetName sets file name used for log messages
-func (file *File) SetName(name string) *File {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	if file.name != name {
-		file.name = name
-		file.reopen = true
+	f := &File{
+		name:   DefaultFileName,
+		mode:   DefaultFileMode,
+		flags:  DefaultFileFlags,
+		stream: NewStream(),
 	}
 
-	return file
+	f.stream.SetOpener(f)
+
+	return f
 }
 
-// GetName sets file name used for log messages
-func (file *File) GetName() string {
-	file.mutex.RLock()
-	defer file.mutex.RUnlock()
-
-	return file.name
-}
-
-// SetFlags sets file flags from os package
-func (file *File) SetFlags(flags int) *File {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	if file.flags != flags {
-		file.flags = flags
-		file.reopen = true
-	}
-
-	return file
-}
-
-// GetFlags returns file flags
-func (file *File) GetFlags() int {
-	file.mutex.RLock()
-	defer file.mutex.RUnlock()
-
-	return file.flags
-}
-
-// SetMode sets file mode/permissions
-func (file *File) SetMode(mode os.FileMode) *File {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	if file.mode != mode {
-		file.mode = mode
-		file.reopen = true
-	}
-
-	return file
-}
-
-// GetMode returns file mode/permissions
-func (file *File) GetMode() os.FileMode {
-	file.mutex.RLock()
-	defer file.mutex.RUnlock()
-
-	return file.mode
-}
-
-// Emit logs messages from Logger to file
-func (file *File) Emit(record *Record) error {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	if file.reopen {
-		err := file.close()
-
-		if err != nil {
-			return NewRuntimeError("cannot close file "+file.name, err)
-		}
-
-		file.reopen = false
-	}
-
-	if file.handler == nil {
-		err := file.open()
-
-		if err != nil {
-			return NewRuntimeError("cannot open file "+file.name, err)
-		}
-	}
-
-	if file.handler != nil {
-		message, err := file.formatter.Format(record)
-
-		if err != nil {
-			return NewRuntimeError("cannot format record", err)
-		}
-
-		_, err = fmt.Fprintln(file.handler, message)
-
-		if err != nil {
-			return NewRuntimeError("cannot append file "+file.name, err)
-		}
-	}
-
-	return nil
-}
-
-// Close closes opened file
-func (file *File) Close() error {
-	file.mutex.Lock()
-	defer file.mutex.Unlock()
-
-	err := file.close()
+// Open file.
+func (f *File) Open() error {
+	writer, err := os.OpenFile(f.name, f.flags, f.mode)
 
 	if err != nil {
-		return NewRuntimeError("cannot close file "+file.name, err)
+		return NewRuntimeError("cannot open new file", err)
+	}
+
+	err = f.stream.SetWriter(writer)
+
+	if err != nil {
+		return NewRuntimeError("cannot set new writer", err)
 	}
 
 	return nil
 }
 
-func (file *File) open() error {
-	var err error
-
-	file.handler, err = os.OpenFile(
-		file.name,
-		file.flags,
-		file.mode,
-	)
-
-	return err
+// SetFormatter sets Formatter.
+func (f *File) SetFormatter(formatter *Formatter) Handler {
+	return f.stream.SetFormatter(formatter)
 }
 
-func (file *File) close() error {
-	var err error
+// GetFormatter returns Formatter.
+func (f *File) GetFormatter() *Formatter {
+	return f.stream.GetFormatter()
+}
 
-	if file.handler != nil {
-		err = file.handler.Close()
-		file.handler = nil
+// SetMinimumLevel sets minimum log level.
+func (f *File) SetMinimumLevel(level int) Handler {
+	return f.stream.SetMinimumLevel(level)
+}
+
+// GetMinimumLevel returns minimum log level.
+func (f *File) GetMinimumLevel() int {
+	return f.stream.GetMinimumLevel()
+}
+
+// SetMaximumLevel sets maximum log level.
+func (f *File) SetMaximumLevel(level int) Handler {
+	return f.stream.SetMaximumLevel(level)
+}
+
+// GetMaximumLevel returns maximum log level.
+func (f *File) GetMaximumLevel() int {
+	return f.stream.GetMaximumLevel()
+}
+
+// SetLevelRange sets minimum and maximum log level values.
+func (f *File) SetLevelRange(min, max int) Handler {
+	return f.stream.SetLevelRange(min, max)
+}
+
+// GetLevelRange returns minimum and maximum log level values.
+func (f *File) GetLevelRange() (min, max int) {
+	return f.stream.GetLevelRange()
+}
+
+// SetName sets file name used for log messages.
+func (f *File) SetName(name string) *File {
+	f.stream.Lock()
+	defer f.stream.Unlock()
+
+	if f.name != name {
+		f.name = name
+		f.stream.Reopen()
 	}
 
-	return err
+	return f
+}
+
+// GetName sets file name used for log messages.
+func (f *File) GetName() string {
+	f.stream.RLock()
+	defer f.stream.RUnlock()
+
+	return f.name
+}
+
+// SetFlags sets file flags from os package.
+func (f *File) SetFlags(flags int) *File {
+	f.stream.Lock()
+	defer f.stream.Unlock()
+
+	if f.flags != flags {
+		f.flags = flags
+		f.stream.Reopen()
+	}
+
+	return f
+}
+
+// GetFlags returns file flags.
+func (f *File) GetFlags() int {
+	f.stream.RLock()
+	defer f.stream.RUnlock()
+
+	return f.flags
+}
+
+// SetMode sets file mode/permissions.
+func (f *File) SetMode(mode os.FileMode) *File {
+	f.stream.Lock()
+	defer f.stream.Unlock()
+
+	if f.mode != mode {
+		f.mode = mode
+		f.stream.Reopen()
+	}
+
+	return f
+}
+
+// GetMode returns file mode/permissions.
+func (f *File) GetMode() os.FileMode {
+	f.stream.RLock()
+	defer f.stream.RUnlock()
+
+	return f.mode
+}
+
+// Emit logs messages from Logger to file.
+func (f *File) Emit(record *Record) error {
+	return f.stream.Emit(record)
+}
+
+// Close closes opened file.
+func (f *File) Close() error {
+	return f.stream.Close()
 }

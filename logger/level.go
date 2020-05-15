@@ -14,7 +14,8 @@
 
 package logger
 
-// IDGenerator type that returns generated ID used in log messages.
-type IDGenerator interface {
-	Generate() (id interface{}, err error)
+// Level defines log level information fields.
+type Level struct {
+	Value int    `json:"value"`
+	Name  string `json:"name"`
 }

@@ -21,10 +21,10 @@ import (
 	"runtime"
 )
 
-// Named is used as named string placeholders for logger functions
+// Named is used as named string placeholders for logger functions.
 type Named map[string]interface{}
 
-// getHostname returns local hostname
+// getHostname returns local hostname.
 func getHostname() (string, error) {
 	hostname, err := os.Hostname()
 
@@ -35,38 +35,37 @@ func getHostname() (string, error) {
 	return hostname, nil
 }
 
-// getAddress returns local IP address
+// getAddress returns local IP address.
 func getAddress() (string, error) {
-	var address string
-
 	connection, err := net.Dial("udp", "8.8.8.8:80")
 
-	if err == nil {
-		defer connection.Close()
-
-		address = connection.LocalAddr().(*net.UDPAddr).IP.String()
-	} else {
-		return "127.0.0.1", NewRuntimeError(
-			"cannot connect to primary Google DNS",
-			err,
-		)
+	if err != nil {
+		return "127.0.0.1", NewRuntimeError("cannot connect to primary Google DNS", err)
 	}
 
-	return address, nil
+	defer func() {
+		err := connection.Close()
+
+		if err != nil {
+			printError(NewRuntimeError("cannot close UDP connection", err))
+		}
+	}()
+
+	return connection.LocalAddr().(*net.UDPAddr).IP.String(), nil
 }
 
 // getPathLineFunction returns absolute file path, file line number and function
-// name
+// name.
 func getPathLineFunction(skip int) (path string, line int, function string) {
 	var pc uintptr
 
 	pc, path, line, _ = runtime.Caller(skip)
 	function = runtime.FuncForPC(pc).Name()
 
-	return
+	return path, line, function
 }
 
-// printError prints error to error output
+// printError prints error to error output.
 func printError(err error) {
 	fmt.Fprintln(os.Stderr, "Logger error:", err)
 }

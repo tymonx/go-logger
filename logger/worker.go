@@ -18,23 +18,23 @@ import (
 	"sync"
 )
 
-// These constants define default values for Worker
+// These constants define default values for Worker.
 const (
 	DefaultQueueLength = 4096
 )
 
 // A Worker represents an active logger worker thread. It handles formatting
-// received log messages and I/O operations
+// received log messages and I/O operations.
 type Worker struct {
 	flush   chan *sync.WaitGroup
 	records chan *Record
 	mutex   sync.RWMutex
 }
 
-var gWorkerOnce sync.Once
-var gWorkerInstance *Worker
+var gWorkerOnce sync.Once   // nolint:gochecknoglobals
+var gWorkerInstance *Worker // nolint:gochecknoglobals
 
-// NewWorker creates a new Worker object
+// NewWorker creates a new Worker object.
 func NewWorker() *Worker {
 	worker := &Worker{
 		flush:   make(chan *sync.WaitGroup, 1),
@@ -47,7 +47,7 @@ func NewWorker() *Worker {
 }
 
 // GetWorker returns logger worker instance. First call to it creates and
-// starts logger worker thread
+// starts logger worker thread.
 func GetWorker() *Worker {
 	gWorkerOnce.Do(func() {
 		gWorkerInstance = NewWorker()
@@ -56,41 +56,41 @@ func GetWorker() *Worker {
 	return gWorkerInstance
 }
 
-// SetQueueLength sets logger worker thread queue length for log messages
-func (worker *Worker) SetQueueLength(length int) *Worker {
-	worker.mutex.Lock()
-	defer worker.mutex.Unlock()
+// SetQueueLength sets logger worker thread queue length for log messages.
+func (w *Worker) SetQueueLength(length int) *Worker {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 
 	if length <= 0 {
 		length = DefaultQueueLength
 	}
 
-	if cap(worker.records) != length {
-		worker.records = make(chan *Record, length)
+	if cap(w.records) != length {
+		w.records = make(chan *Record, length)
 	}
 
-	return worker
+	return w
 }
 
-// Flush flushes all log messages
-func (worker *Worker) Flush() *Worker {
+// Flush flushes all log messages.
+func (w *Worker) Flush() *Worker {
 	flush := new(sync.WaitGroup)
 
 	flush.Add(1)
-	worker.flush <- flush
+	w.flush <- flush
 	flush.Wait()
 
-	return worker
+	return w
 }
 
 // Run processes all incoming log messages from loggers. It emits received log
-// records to all added log handlers for specific logger
-func (worker *Worker) run() {
+// records to all added log handlers for specific logger.
+func (w *Worker) run() {
 	for {
 		select {
-		case flush := <-worker.flush:
-			for records := len(worker.records); records > 0; records-- {
-				record := <-worker.records
+		case flush := <-w.flush:
+			for records := len(w.records); records > 0; records-- {
+				record := <-w.records
 
 				if record != nil {
 					record.logger.emit(record)
@@ -100,7 +100,7 @@ func (worker *Worker) run() {
 			if flush != nil {
 				flush.Done()
 			}
-		case record := <-worker.records:
+		case record := <-w.records:
 			if record != nil {
 				record.logger.emit(record)
 			}
