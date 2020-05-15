@@ -72,7 +72,7 @@ func (record *Record) GetIDNumber() (int, error) {
 			return 0, NewRuntimeError("invalid ID conversion", err)
 		}
 	case int:
-		id, _ = record.ID.(int)
+		id = record.ID.(int)
 	default:
 		return 0, NewRuntimeError("invalid ID type", nil)
 	}
@@ -86,7 +86,7 @@ func (record *Record) GetIDString() (string, error) {
 
 	switch record.ID.(type) {
 	case string:
-		id, _ = record.ID.(string)
+		id = record.ID.(string)
 	case int:
 		id = strconv.Itoa(record.ID.(int))
 	default:

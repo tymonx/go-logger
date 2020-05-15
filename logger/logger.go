@@ -21,9 +21,9 @@
 package logger
 
 import (
-	 "sync"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -123,12 +123,13 @@ func (logger *Logger) GetName() string {
 	return logger.name
 }
 
+// AddHandler sets log handler under provided identifier name
 func (logger *Logger) AddHandler(name string, handler Handler) *Logger {
 	logger.mutex.Lock()
 	defer logger.mutex.Unlock()
 
 	logger.handlers[name] = handler
-	 return logger
+	return logger
 }
 
 // CreateAddHandler it creates registered log handler by provided name and it
@@ -136,11 +137,11 @@ func (logger *Logger) AddHandler(name string, handler Handler) *Logger {
 func (logger *Logger) CreateAddHandler(name string) error {
 	handler, err := CreateHandler(name)
 
-	if  err  == nil {
+	if err == nil {
 		logger.AddHandler(name, handler)
 	}
 
-	  return err
+	return err
 }
 
 // SetHandlers sets log handlers for logger
