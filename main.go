@@ -34,6 +34,12 @@ func main() {
 		"z": 3,
 	})
 
+	logger.Info("Named placeholders {z} {y} {x}", map[string]interface{}{
+		"x": 1,
+		"y": 2,
+		"z": 3,
+	})
+
 	logger.Info("Object placeholders {.Z} {.Y} {.X}", struct {
 		X, Y, Z int
 	}{

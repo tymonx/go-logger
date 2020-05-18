@@ -15,7 +15,10 @@
 package logger
 
 import (
+	"os"
+	"path/filepath"
 	"sync"
+	"time"
 )
 
 // These constants define default values for Worker.
@@ -93,7 +96,7 @@ func (w *Worker) run() {
 				record := <-w.records
 
 				if record != nil {
-					record.logger.emit(record)
+					w.emit(record.logger, record)
 				}
 			}
 
@@ -102,7 +105,56 @@ func (w *Worker) run() {
 			}
 		case record := <-w.records:
 			if record != nil {
-				record.logger.emit(record)
+				w.emit(record.logger, record)
+			}
+		}
+	}
+}
+
+// emit prepares provided log record and it dispatches to all added log
+// handlers for further formatting and specific I/O implementation operations.
+func (*Worker) emit(logger *Logger, record *Record) {
+	var err error
+
+	record.Type = DefaultTypeName
+	record.File.Name = filepath.Base(record.File.Path)
+	record.File.Function = filepath.Base(record.File.Function)
+	record.Timestamp.Created = record.Time.Format(time.RFC3339)
+
+	record.Address, err = getAddress()
+
+	if err != nil {
+		printError(NewRuntimeError("cannot get local IP address", err))
+	}
+
+	record.Hostname, err = getHostname()
+
+	if err != nil {
+		printError(NewRuntimeError("cannot get local hostname", err))
+	}
+
+	logger.mutex.RLock()
+	defer logger.mutex.RUnlock()
+
+	record.Name = logger.name
+	record.ID, err = logger.idGenerator.Generate()
+
+	if err != nil {
+		printError(NewRuntimeError("cannot generate ID", err))
+	}
+
+	if record.Name == "" {
+		record.Name = filepath.Base(os.Args[0])
+	}
+
+	for _, handler := range logger.handlers {
+		min, max := handler.GetLevelRange()
+
+		if (record.Level.Value >= min) && (record.Level.Value <= max) {
+			err = handler.Emit(record)
+
+			if err != nil {
+				printError(NewRuntimeError("cannot emit record", err))
 			}
 		}
 	}

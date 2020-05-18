@@ -190,6 +190,12 @@ func Log(level int, levelName, message string, arguments ...interface{}) {
 	Get().logMessage(level, levelName, message, arguments...)
 }
 
+// Emit emits provided log record to logger worker thread for further
+// formatting and I/O handling from different addded log handlers.
+func Emit(record *Record) *Logger {
+	return Get().Emit(record)
+}
+
 // Flush flushes all log messages.
 func Flush() *Logger {
 	return Get().Flush()

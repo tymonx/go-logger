@@ -232,6 +232,7 @@ func (f *Formatter) formatTimeUnsafe(record *Record) (string, error) {
 func (f *Formatter) formatMessageUnsafe(record *Record) (string, error) {
 	var err error
 
+	f.record = record
 	message := record.Message
 
 	if len(record.Arguments) > 0 {
@@ -246,15 +247,17 @@ func (f *Formatter) formatMessageUnsafe(record *Record) (string, error) {
 
 			funcMap[placeholder] = f.argumentValue(argument)
 
-			switch arg := argument.(type) {
-			case Named:
-				for key, value := range arg {
-					funcMap[key] = f.argumentValue(value)
+			valueOf := reflect.ValueOf(argument)
+
+			switch valueOf.Kind() {
+			case reflect.Map:
+				if reflect.TypeOf(argument).Key().Kind() == reflect.String {
+					for _, key := range valueOf.MapKeys() {
+						funcMap[key.String()] = f.argumentValue(valueOf.MapIndex(key).Interface())
+					}
 				}
-			default:
-				if reflect.TypeOf(argument).Kind() == reflect.Struct {
-					object = argument
-				}
+			case reflect.Struct:
+				object = argument
 			}
 		}
 
