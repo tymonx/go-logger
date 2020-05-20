@@ -77,3 +77,36 @@ Example output:
 ## Documentation
 
 Go logger [documentation](https://tymonx.gitlab.io/go-logger/doc/pkg/gitlab.com/tymonx/go-logger/logger/).
+
+## Development
+
+All tools needed for developing, formatting, building, linting, testing and
+documenting this project are available out-of-box from the Docker image as
+part of the [tymonx/docker-go](https://gitlab.com/tymonx/docker-go) project.
+
+Run the `docker-run` script without any arguments to work in Docker
+container:
+
+    scripts/docker-run
+
+Use the `go-format` script to automatically reformat Go source files:
+
+    scripts/go-format
+
+Use the `go-lint` script to run various Go linters on Go source files with
+enabled colorization:
+
+    scripts/go-lint
+
+Use the `go-build` script to build Go source files. Equivalent to
+the `go build ./...` execution:
+
+    scripts/go-build
+
+Use the `go-test` script to run tests and validate coverage result with
+enabled colorization:
+
+    scripts/go-test
+
+All above scripts accept standard Go paths as additional arguments like
+`./`, `./...`, `<package-name>` and so on.

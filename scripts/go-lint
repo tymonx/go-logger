@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+#
 # Copyright 2020 Tymoteusz Blazejczyk
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,28 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Ignore everything
-*
+# Get current directory location for this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-# Don't ignore directories
-!*/
-
-# Don't ignore YAML files
-!*.yml
-!*.yaml
-
-# Don't ignore Go files
-!*.go
-!go.mod
-!go.sum
-
-# Don't ignore script files
-!scripts/*
-
-# Don't ignore Markdown files
-!*.md
-
-# Don't ignore project files
-!LICENSE
-!.gitignore
-!.gitlab-ci.yml
+# Run docker
+$SCRIPT_DIR/docker-run $(basename $0) $@
