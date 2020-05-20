@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 #
 # Copyright 2020 Tymoteusz Blazejczyk
 #
@@ -14,8 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Get current directory location for this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+function get_current_script_dir {
+    echo "$(cd -P -- "$(dirname -- "$(command -v -- "$1")")" >/dev/null 2>&1 && pwd -P)"
+}
+
+# Get current directory location for this script in portable safe way
+if [[ -n "${BASH_SOURCE:-}" ]]; then
+    SCRIPT_DIR="$(get_current_script_dir "${BASH_SOURCE[0]}")"
+else
+    SCRIPT_DIR="$(get_current_script_dir "$0")"
+fi
 
 # Run docker
 $SCRIPT_DIR/docker-run $(basename $0) $@
