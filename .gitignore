@@ -28,7 +28,8 @@
 !go.sum
 
 # Don't ignore script files
-!scripts/*
+!scripts/docker-run
+!scripts/go-*
 
 # Don't ignore Markdown files
 !*.md
