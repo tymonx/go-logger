@@ -26,4 +26,4 @@ else
 fi
 
 # Run docker
-$SCRIPT_DIR/docker-run $(basename $0) $@
+$SCRIPT_DIR/docker-run $(basename "$0") $@
