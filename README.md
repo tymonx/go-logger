@@ -22,6 +22,7 @@ Lightweight, fast and powerful logger implementation in Go.
   * Supporting custom log message formats
   * Supporting custom log ID generators
   * Supporting exporting log records to JSON output
+  * No external third party dependencies
 
 ## Install
 
