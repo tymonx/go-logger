@@ -31,6 +31,71 @@ func Get() *Logger {
 	return gInstance
 }
 
+// Enable enables all added log handlers.
+func Enable() *Logger {
+	return Get().Enable()
+}
+
+// Disable disabled all added log handlers.
+func Disable() *Logger {
+	return Get().Disable()
+}
+
+// IsEnabled returns true if at least one of added log handlers is enabled.
+func IsEnabled() bool {
+	return Get().IsEnabled()
+}
+
+// SetLevel sets log level to all added log handlers.
+func SetLevel(level int) *Logger {
+	return Get().SetLevel(level)
+}
+
+// SetMinimumLevel sets minimum log level to all added log handlers.
+func SetMinimumLevel(level int) *Logger {
+	return Get().SetMinimumLevel(level)
+}
+
+// SetMaximumLevel sets maximum log level to all added log handlers.
+func SetMaximumLevel(level int) *Logger {
+	return Get().SetMaximumLevel(level)
+}
+
+// SetLevelRange sets minimum and maximum log level values to all added log handlers.
+func SetLevelRange(min, max int) *Logger {
+	return Get().SetLevelRange(min, max)
+}
+
+// SetFormatter sets provided formatter to all added log handlers.
+func SetFormatter(formatter *Formatter) *Logger {
+	return Get().SetFormatter(formatter)
+}
+
+// SetFormat sets provided format string to all added log handlers.
+func SetFormat(format string) *Logger {
+	return Get().SetFormat(format)
+}
+
+// SetDateFormat sets provided date format string to all added log handlers.
+func SetDateFormat(format string) *Logger {
+	return Get().SetDateFormat(format)
+}
+
+// SetPlaceholder sets provided placeholder string to all added log handlers.
+func SetPlaceholder(placeholder string) *Logger {
+	return Get().SetPlaceholder(placeholder)
+}
+
+// AddFuncs adds template functions to format log message to all added log handlers.
+func AddFuncs(funcs FormatterFuncs) *Logger {
+	return Get().AddFuncs(funcs)
+}
+
+// ResetFormatters resets all formatters from added log handlers.
+func ResetFormatters() *Logger {
+	return Get().ResetFormatters()
+}
+
 // SetErrorCode sets error code that is returned during Fatal call.
 // On default it is 1.
 func SetErrorCode(errorCode int) *Logger {

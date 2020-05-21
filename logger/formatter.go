@@ -46,7 +46,6 @@ type FormatterFuncs map[string]interface{}
 type Formatter struct {
 	format        string
 	dateFormat    string
-	record        *Record
 	template      *template.Template
 	placeholder   string
 	timeBuffer    *bytes.Buffer
@@ -66,8 +65,6 @@ func NewFormatter() *Formatter {
 		formatBuffer:  new(bytes.Buffer),
 		messageBuffer: new(bytes.Buffer),
 	}
-
-	f.setFuncs()
 
 	return f
 }
@@ -114,14 +111,6 @@ func (f *Formatter) AddFuncs(funcs FormatterFuncs) *Formatter {
 	return f
 }
 
-// GetRecord returns assigned log record object to formatter.
-func (f *Formatter) GetRecord() *Record {
-	f.mutex.RLock()
-	defer f.mutex.RUnlock()
-
-	return f.record
-}
-
 // SetFormat sets format string used for formatting log message.
 func (f *Formatter) SetFormat(format string) *Formatter {
 	f.mutex.Lock()
@@ -164,7 +153,9 @@ func (f *Formatter) Format(record *Record) (string, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	message, err := f.formatRecord(record)
+	f.template.Funcs(f.getRecordFuncs(record))
+
+	message, err := f.formatString(f.template, f.formatBuffer, f.format, nil)
 
 	if err != nil {
 		return "", NewRuntimeError("cannot format record", err)
@@ -178,7 +169,9 @@ func (f *Formatter) FormatTime(record *Record) (string, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	message, err := f.formatTimeUnsafe(record)
+	f.template.Funcs(f.getRecordFuncs(record))
+
+	message, err := f.formatString(f.template, f.timeBuffer, f.dateFormat, nil)
 
 	if err != nil {
 		return "", NewRuntimeError("cannot format time", err)
@@ -193,7 +186,7 @@ func (f *Formatter) FormatMessage(record *Record) (string, error) {
 	f.mutex.Lock()
 	defer f.mutex.Unlock()
 
-	message, err := f.formatMessageUnsafe(record)
+	message, err := f.formatMessageRecord(record)
 
 	if err != nil {
 		return "", NewRuntimeError("cannot format message", err)
@@ -202,37 +195,11 @@ func (f *Formatter) FormatMessage(record *Record) (string, error) {
 	return message, nil
 }
 
-// Format returns formatted log message string based on provided log record
-// object.
-func (f *Formatter) formatRecord(record *Record) (string, error) {
-	f.record = record
-
-	return f.formatString(
-		f.template,
-		f.formatBuffer,
-		f.format,
-		nil,
-	)
-}
-
-// formatTimeUnsafe returns formatted date string based on provided log record object.
-func (f *Formatter) formatTimeUnsafe(record *Record) (string, error) {
-	f.record = record
-
-	return f.formatString(
-		f.template,
-		f.timeBuffer,
-		f.dateFormat,
-		nil,
-	)
-}
-
 // formatMessageUnsafe returns formatted user message string based on provided log
 // record object.
-func (f *Formatter) formatMessageUnsafe(record *Record) (string, error) {
+func (f *Formatter) formatMessageRecord(record *Record) (string, error) {
 	var err error
 
-	f.record = record
 	message := record.Message
 
 	if len(record.Arguments) > 0 {
@@ -240,7 +207,7 @@ func (f *Formatter) formatMessageUnsafe(record *Record) (string, error) {
 
 		funcMap := make(template.FuncMap)
 
-		funcMap[f.placeholder] = f.argumentAutomatic()
+		funcMap[f.placeholder] = f.argumentAutomatic(record)
 
 		for position, argument := range record.Arguments {
 			placeholder := f.placeholder + strconv.Itoa(position)
@@ -262,7 +229,7 @@ func (f *Formatter) formatMessageUnsafe(record *Record) (string, error) {
 		}
 
 		message, err = f.formatString(
-			template.New("").Delims("{", "}").Funcs(funcMap),
+			template.New("").Delims("{", "}").Funcs(f.getRecordFuncs(record)).Funcs(funcMap),
 			f.messageBuffer,
 			message,
 			object,
@@ -281,15 +248,15 @@ func (*Formatter) argumentValue(argument interface{}) func() interface{} {
 
 // argumentAutomatic returns closure that returns log argument from automatic
 // placeholder used in log message.
-func (f *Formatter) argumentAutomatic() func() interface{} {
+func (*Formatter) argumentAutomatic(record *Record) func() interface{} {
 	position := 0
-	arguments := len(f.record.Arguments)
+	arguments := len(record.Arguments)
 
 	return func() interface{} {
 		var argument interface{}
 
 		if position < arguments {
-			argument = f.record.Arguments[position]
+			argument = record.Arguments[position]
 			position++
 		}
 
@@ -324,11 +291,14 @@ func (*Formatter) formatString(templ *template.Template, buffer *bytes.Buffer, f
 	return message, nil
 }
 
-// setFuncs sets default template functions used to formatting log message.
-func (f *Formatter) setFuncs() {
-	f.template.Funcs(template.FuncMap{
+// getRecordFuncs sets default template functions used to formatting log message.
+func (f *Formatter) getRecordFuncs(record *Record) template.FuncMap {
+	return template.FuncMap{
+		"uid":       os.Getuid,
 		"gid":       os.Getgid,
 		"pid":       os.Getpid,
+		"egid":      os.Getegid,
+		"euid":      os.Geteuid,
 		"ppid":      os.Getppid,
 		"getEnv":    os.Getenv,
 		"expandEnv": os.ExpandEnv,
@@ -336,7 +306,7 @@ func (f *Formatter) setFuncs() {
 			return filepath.Base(os.Args[0])
 		},
 		"date": func() string {
-			date, err := f.formatTimeUnsafe(f.record)
+			date, err := f.formatString(f.template, f.timeBuffer, f.dateFormat, nil)
 
 			if err != nil {
 				printError(NewRuntimeError("cannot format date", err))
@@ -345,7 +315,7 @@ func (f *Formatter) setFuncs() {
 			return date
 		},
 		"message": func() string {
-			message, err := f.formatMessageUnsafe(f.record)
+			message, err := f.formatMessageRecord(record)
 
 			if err != nil {
 				printError(NewRuntimeError("cannot format message", err))
@@ -354,73 +324,73 @@ func (f *Formatter) setFuncs() {
 			return message
 		},
 		"levelValue": func() int {
-			return f.record.Level.Value
+			return record.Level.Value
 		},
 		"level": func() string {
-			return strings.ToLower(f.record.Level.Name)
+			return strings.ToLower(record.Level.Name)
 		},
 		"Level": func() string {
-			return strings.Title(strings.ToLower(f.record.Level.Name))
+			return strings.Title(strings.ToLower(record.Level.Name))
 		},
 		"LEVEL": func() string {
-			return strings.ToUpper(f.record.Level.Name)
+			return strings.ToUpper(record.Level.Name)
 		},
 		"iso8601": func() string {
-			return f.record.Time.Format(time.RFC3339)
+			return record.Time.Format(time.RFC3339)
 		},
 		"id": func() interface{} {
-			return f.record.ID
+			return record.ID
 		},
 		"name": func() string {
-			return f.record.Name
+			return record.Name
 		},
 		"host": func() string {
-			return f.record.Address
+			return record.Address
 		},
 		"hostname": func() string {
-			return f.record.Hostname
+			return record.Hostname
 		},
 		"address": func() string {
-			return f.record.Address
+			return record.Address
 		},
 		"nanosecond": func() string {
-			return fmt.Sprintf("%09d", f.record.Time.Nanosecond())
+			return fmt.Sprintf("%09d", record.Time.Nanosecond())
 		},
 		"microsecond": func() string {
-			return fmt.Sprintf("%06d", f.record.Time.Nanosecond()/kilo)
+			return fmt.Sprintf("%06d", record.Time.Nanosecond()/kilo)
 		},
 		"millisecond": func() string {
-			return fmt.Sprintf("%03d", f.record.Time.Nanosecond()/mega)
+			return fmt.Sprintf("%03d", record.Time.Nanosecond()/mega)
 		},
 		"second": func() string {
-			return fmt.Sprintf("%02d", f.record.Time.Second())
+			return fmt.Sprintf("%02d", record.Time.Second())
 		},
 		"minute": func() string {
-			return fmt.Sprintf("%02d", f.record.Time.Minute())
+			return fmt.Sprintf("%02d", record.Time.Minute())
 		},
 		"hour": func() string {
-			return fmt.Sprintf("%02d", f.record.Time.Hour())
+			return fmt.Sprintf("%02d", record.Time.Hour())
 		},
 		"day": func() string {
-			return fmt.Sprintf("%02d", f.record.Time.Day())
+			return fmt.Sprintf("%02d", record.Time.Day())
 		},
 		"month": func() string {
-			return fmt.Sprintf("%02d", f.record.Time.Month())
+			return fmt.Sprintf("%02d", record.Time.Month())
 		},
 		"YEAR": func() string {
-			return fmt.Sprintf("%02d", f.record.Time.Year()%percentage)
+			return fmt.Sprintf("%02d", record.Time.Year()%percentage)
 		},
 		"year": func() int {
-			return f.record.Time.Year()
+			return record.Time.Year()
 		},
 		"file": func() string {
-			return f.record.File.Name
+			return record.File.Name
 		},
 		"line": func() int {
-			return f.record.File.Line
+			return record.File.Line
 		},
 		"function": func() string {
-			return f.record.File.Function
+			return record.File.Function
 		},
-	})
+	}
 }

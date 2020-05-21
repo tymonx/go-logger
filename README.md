@@ -7,7 +7,7 @@ Lightweight, fast and powerful logger implementation in Go.
 *   All log formatting and I/O operations are offloaded to separate worker thread
 *   All calls to log methods are lightweight and consumes very little CPU resources
 *   It can simultaneously log message to different log handlers
-*   Various customizable built-in log handlers `Stdout`, `Stderr`, `File`, `Stream` and `Syslog`
+*   Various customizable built-in log handlers `Stdout`, `Stderr`, `File`, `Stream`, `Buffer` and `Syslog`
 *   Various log methods `Trace`, `Debug`, `Info`, `Notice`, `Warning`, `Error`, `Critical`, `Alert`, `Fatal` and `Panic`
 *   Flexible log message formatter with some predefined named placeholders
 *   Use new created logger instance or use the global one as `logger.*`

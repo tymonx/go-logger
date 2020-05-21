@@ -53,7 +53,6 @@ func NewSyslog() *Syslog {
 		stream:   NewStream(),
 	}
 
-	s.setFormatterFuncs(s.stream.GetFormatter())
 	s.stream.GetFormatter().SetFormat(DefaultSyslogFormat)
 	s.stream.SetOpener(s)
 
@@ -65,15 +64,34 @@ func (s *Syslog) Open() (io.WriteCloser, error) {
 	return net.Dial(s.network, s.address+":"+strconv.Itoa(s.port))
 }
 
+// Enable enables log handler.
+func (s *Syslog) Enable() Handler {
+	return s.stream.Enable()
+}
+
+// Disable disabled log handler.
+func (s *Syslog) Disable() Handler {
+	return s.stream.Disable()
+}
+
+// IsEnabled returns if log handler is enabled.
+func (s *Syslog) IsEnabled() bool {
+	return s.stream.IsEnabled()
+}
+
 // SetFormatter sets Formatter.
 func (s *Syslog) SetFormatter(formatter *Formatter) Handler {
-	s.setFormatterFuncs(formatter)
 	return s.stream.SetFormatter(formatter)
 }
 
 // GetFormatter returns Formatter.
 func (s *Syslog) GetFormatter() *Formatter {
 	return s.stream.GetFormatter()
+}
+
+// SetLevel sets log level.
+func (s *Syslog) SetLevel(level int) Handler {
+	return s.stream.SetLevel(level)
 }
 
 // SetMinimumLevel sets minimum log level.
@@ -187,6 +205,8 @@ func (s *Syslog) GetAddress() string {
 
 // Emit logs messages from Logger to Syslog server.
 func (s *Syslog) Emit(record *Record) error {
+	s.stream.GetFormatter().AddFuncs(s.getRecordFuncs(record))
+
 	return s.stream.Emit(record)
 }
 
@@ -197,8 +217,8 @@ func (s *Syslog) Close() error {
 
 // setFormatterFuncs sets template functions that are specific for Syslog log
 // messages.
-func (s *Syslog) setFormatterFuncs(formatter *Formatter) {
-	formatter.AddFuncs(map[string]interface{}{
+func (s *Syslog) getRecordFuncs(record *Record) FormatterFuncs {
+	return FormatterFuncs{
 		"syslogVersion": func() int {
 			return s.version
 		},
@@ -217,7 +237,7 @@ func (s *Syslog) setFormatterFuncs(formatter *Formatter) {
 			severity := 0
 
 			for i, level := range severities {
-				if level <= s.stream.formatter.record.Level.Value {
+				if level <= record.Level.Value {
 					severity = i
 					break
 				}
@@ -225,5 +245,5 @@ func (s *Syslog) setFormatterFuncs(formatter *Formatter) {
 
 			return ((0x1F & s.facility) << 3) | (0x07 & severity)
 		},
-	})
+	}
 }

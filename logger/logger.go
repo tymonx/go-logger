@@ -22,6 +22,7 @@ package logger
 
 import (
 	"os"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -61,7 +62,7 @@ const (
 
 	DefaultErrorCode = 1
 
-	loggerSkipCall = 3
+	loggerSkipCall = 2
 )
 
 // A Logger represents an active logging object that generates log messages for
@@ -86,6 +87,164 @@ func New() *Logger {
 		errorCode:   DefaultErrorCode,
 		idGenerator: NewUUID4(),
 	}
+}
+
+// Enable enables all added log handlers.
+func (l *Logger) Enable() *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.Enable()
+	}
+
+	return l
+}
+
+// Disable disabled all added log handlers.
+func (l *Logger) Disable() *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.Disable()
+	}
+
+	return l
+}
+
+// IsEnabled returns true if at least one of added log handlers is enabled.
+func (l *Logger) IsEnabled() bool {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		if handler.IsEnabled() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// SetLevel sets log level to all added log handlers.
+func (l *Logger) SetLevel(level int) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.SetLevel(level)
+	}
+
+	return l
+}
+
+// SetMinimumLevel sets minimum log level to all added log handlers.
+func (l *Logger) SetMinimumLevel(level int) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.SetMinimumLevel(level)
+	}
+
+	return l
+}
+
+// SetMaximumLevel sets maximum log level to all added log handlers.
+func (l *Logger) SetMaximumLevel(level int) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.SetMaximumLevel(level)
+	}
+
+	return l
+}
+
+// SetLevelRange sets minimum and maximum log level values to all added log handlers.
+func (l *Logger) SetLevelRange(min, max int) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.SetLevelRange(min, max)
+	}
+
+	return l
+}
+
+// SetFormatter sets provided formatter to all added log handlers.
+func (l *Logger) SetFormatter(formatter *Formatter) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.SetFormatter(formatter)
+	}
+
+	return l
+}
+
+// SetFormat sets provided format string to all added log handlers.
+func (l *Logger) SetFormat(format string) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.GetFormatter().SetFormat(format)
+	}
+
+	return l
+}
+
+// SetDateFormat sets provided date format string to all added log handlers.
+func (l *Logger) SetDateFormat(format string) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.GetFormatter().SetDateFormat(format)
+	}
+
+	return l
+}
+
+// SetPlaceholder sets provided placeholder string to all added log handlers.
+func (l *Logger) SetPlaceholder(placeholder string) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.GetFormatter().SetPlaceholder(placeholder)
+	}
+
+	return l
+}
+
+// AddFuncs adds template functions to format log message to all added log handlers.
+func (l *Logger) AddFuncs(funcs FormatterFuncs) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.GetFormatter().AddFuncs(funcs)
+	}
+
+	return l
+}
+
+// ResetFormatters resets all formatters from added log handlers.
+func (l *Logger) ResetFormatters() *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	for _, handler := range l.handlers {
+		handler.GetFormatter().Reset()
+	}
+
+	return l
 }
 
 // SetErrorCode sets error code that is returned during Fatal call.
@@ -349,13 +508,24 @@ func (l *Logger) Close() error {
 	return err
 }
 
+// CloseDefer is a small helper function that invokes the .Close() method
+// and it does an error checking with logging. Useful when using with
+// the defer keyword to avoid creating an anonymous function wrapper only
+// to check for an error manually and passing the errcheck linter.
+func (l *Logger) CloseDefer() {
+	if err := l.Close(); err != nil {
+		printError(NewRuntimeError("cannot close logger", err))
+	}
+}
+
 // logMessage logs message with defined log level value and name. It creates and
 // sends lightweight not formatted log messages to separate running logger
 // thread for further formatting and I/O handling from different added log
 // handlers.
 func (l *Logger) logMessage(level int, levelName, message string, arguments ...interface{}) {
 	now := time.Now()
-	path, line, function := getPathLineFunction(loggerSkipCall)
+
+	pc, path, line, _ := runtime.Caller(loggerSkipCall)
 
 	GetWorker().records <- &Record{
 		Time:      now,
@@ -368,7 +538,7 @@ func (l *Logger) logMessage(level int, levelName, message string, arguments ...i
 		File: Source{
 			Line:     line,
 			Path:     path,
-			Function: function,
+			Function: runtime.FuncForPC(pc).Name(),
 		},
 		logger: l,
 	}
