@@ -115,8 +115,8 @@ func (l *Logger) Disable() *Logger {
 
 // IsEnabled returns true if at least one of added log handlers is enabled.
 func (l *Logger) IsEnabled() bool {
-	l.mutex.Lock()
-	defer l.mutex.Unlock()
+	l.mutex.RLock()
+	defer l.mutex.RUnlock()
 
 	for _, handler := range l.handlers {
 		if handler.IsEnabled() {

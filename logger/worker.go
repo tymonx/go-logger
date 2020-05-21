@@ -150,7 +150,7 @@ func (*Worker) emit(logger *Logger, record *Record) {
 	for _, handler := range logger.handlers {
 		min, max := handler.GetLevelRange()
 
-		if (record.Level.Value >= min) && (record.Level.Value <= max) {
+		if handler.IsEnabled() && (record.Level.Value >= min) && (record.Level.Value <= max) {
 			err = handler.Emit(record)
 
 			if err != nil {

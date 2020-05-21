@@ -70,8 +70,8 @@ func (b *Buffer) Disable() Handler {
 
 // IsEnabled returns if log handler is enabled.
 func (b *Buffer) IsEnabled() bool {
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
 
 	return !b.isDisabled
 }
