@@ -20,6 +20,8 @@ type Handler interface {
 
 	GetFormatter() *Formatter
 
+	SetLevel(level int) Handler
+
 	SetMinimumLevel(level int) Handler
 
 	GetMinimumLevel() int
@@ -31,6 +33,12 @@ type Handler interface {
 	SetLevelRange(min, max int) Handler
 
 	GetLevelRange() (min, max int)
+
+	Enable() Handler
+
+	Disable() Handler
+
+	IsEnabled() bool
 
 	Emit(record *Record) error
 

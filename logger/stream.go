@@ -36,6 +36,7 @@ type Stream struct {
 	minimumLevel int
 	maximumLevel int
 	reopen       bool
+	isDisabled   bool
 }
 
 // NewStream creates a new Stream log handler object.
@@ -67,6 +68,28 @@ func (s *Stream) RUnlock() {
 	s.mutex.RUnlock()
 }
 
+// SetWriter sets new writer to stream.
+func (s *Stream) SetWriter(writer io.WriteCloser) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.writer == writer {
+		return nil
+	}
+
+	if s.canClose() {
+		err := s.writer.Close()
+
+		if err != nil {
+			return NewRuntimeError("cannot close stream", err)
+		}
+	}
+
+	s.writer = writer
+
+	return nil
+}
+
 // SetOpener sets opener interface.
 func (s *Stream) SetOpener(opener Opener) *Stream {
 	s.mutex.Lock()
@@ -82,6 +105,34 @@ func (s *Stream) Reopen() *Stream {
 	s.reopen = true
 
 	return s
+}
+
+// Enable enables log handler.
+func (s *Stream) Enable() Handler {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.isDisabled = false
+
+	return s
+}
+
+// Disable disabled log handler.
+func (s *Stream) Disable() Handler {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.isDisabled = true
+
+	return s
+}
+
+// IsEnabled returns if log handler is enabled.
+func (s *Stream) IsEnabled() bool {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+
+	return !s.isDisabled
 }
 
 // SetFormatter sets Formatter.
@@ -100,6 +151,17 @@ func (s *Stream) GetFormatter() *Formatter {
 	defer s.mutex.RUnlock()
 
 	return s.formatter
+}
+
+// SetLevel sets log level.
+func (s *Stream) SetLevel(level int) Handler {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	s.minimumLevel = level
+	s.maximumLevel = level
+
+	return s
 }
 
 // SetMinimumLevel sets minimum log level.

@@ -17,10 +17,11 @@ package logger
 import (
 	"fmt"
 	"path/filepath"
+	"runtime"
 )
 
 const (
-	runtimeErrorSkipCall = 2
+	runtimeErrorSkipCall = 1
 )
 
 // RuntimeError defines runtime error with returned error message, file name,
@@ -35,13 +36,13 @@ type RuntimeError struct {
 
 // NewRuntimeError creates new RuntimeError object.
 func NewRuntimeError(message string, err error) *RuntimeError {
-	path, line, function := getPathLineFunction(runtimeErrorSkipCall)
+	pc, path, line, _ := runtime.Caller(runtimeErrorSkipCall)
 
 	return &RuntimeError{
 		line:     line,
 		file:     filepath.Base(path),
 		message:  message,
-		function: filepath.Base(function),
+		function: filepath.Base(runtime.FuncForPC(pc).Name()),
 		err:      err,
 	}
 }

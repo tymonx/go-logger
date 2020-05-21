@@ -14,7 +14,7 @@
 
 include:
     - project: 'tymonx/gitlab-ci'
-      ref: v0.54.0
+      ref: v0.64.0
       file: '/templates/generic/go.yml'
 
 build:
@@ -23,7 +23,7 @@ build:
 test:
     extends: .go-test
     variables:
-        GO_COVERAGE: "30.0"
+        GO_COVERAGE: "20.0"
 
 pages:
     extends: .go-doc

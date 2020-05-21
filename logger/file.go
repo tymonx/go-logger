@@ -53,6 +53,21 @@ func (f *File) Open() (io.WriteCloser, error) {
 	return os.OpenFile(f.name, f.flags, f.mode)
 }
 
+// Enable enables log handler.
+func (f *File) Enable() Handler {
+	return f.stream.Enable()
+}
+
+// Disable disabled log handler.
+func (f *File) Disable() Handler {
+	return f.stream.Disable()
+}
+
+// IsEnabled returns if log handler is enabled.
+func (f *File) IsEnabled() bool {
+	return f.stream.IsEnabled()
+}
+
 // SetFormatter sets Formatter.
 func (f *File) SetFormatter(formatter *Formatter) Handler {
 	return f.stream.SetFormatter(formatter)
@@ -61,6 +76,11 @@ func (f *File) SetFormatter(formatter *Formatter) Handler {
 // GetFormatter returns Formatter.
 func (f *File) GetFormatter() *Formatter {
 	return f.stream.GetFormatter()
+}
+
+// SetLevel sets log level.
+func (f *File) SetLevel(level int) Handler {
+	return f.stream.SetLevel(level)
 }
 
 // SetMinimumLevel sets minimum log level.

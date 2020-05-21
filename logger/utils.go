@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"runtime"
 )
 
 // Named is used as named string placeholders for logger functions.
@@ -52,17 +51,6 @@ func getAddress() (string, error) {
 	}()
 
 	return connection.LocalAddr().(*net.UDPAddr).IP.String(), nil
-}
-
-// getPathLineFunction returns absolute file path, file line number and function
-// name.
-func getPathLineFunction(skip int) (path string, line int, function string) {
-	var pc uintptr
-
-	pc, path, line, _ = runtime.Caller(skip)
-	function = runtime.FuncForPC(pc).Name()
-
-	return path, line, function
 }
 
 // printError prints error to error output.
