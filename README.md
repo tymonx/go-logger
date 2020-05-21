@@ -26,7 +26,9 @@ Lightweight, fast and powerful logger implementation in Go.
 
 ## Install
 
-`go get -u gitlab.com/tymonx/go-logger`
+```plaintext
+go get -u gitlab.com/tymonx/go-logger
+```
 
 ## Example
 
@@ -65,11 +67,13 @@ func main() {
 
 Example output:
 
-    2020-05-13 12:37:22,536 - Info     - main.go:28:main.main(): Hello from logger!
-    2020-05-13 12:37:22,536 - Info     - main.go:29:main.main(): Automatic placeholders 1 2 3
-    2020-05-13 12:37:22,536 - Info     - main.go:30:main.main(): Positional placeholders 3 2 1
-    2020-05-13 12:37:22,536 - Info     - main.go:32:main.main(): Named placeholders 3 2 1
-    2020-05-13 12:37:22,536 - Info     - main.go:38:main.main(): Object placeholders 3 2 1
+```plaintext
+2020-05-13 12:37:22,536 - Info     - main.go:28:main.main(): Hello from logger!
+2020-05-13 12:37:22,536 - Info     - main.go:29:main.main(): Automatic placeholders 1 2 3
+2020-05-13 12:37:22,536 - Info     - main.go:30:main.main(): Positional placeholders 3 2 1
+2020-05-13 12:37:22,536 - Info     - main.go:32:main.main(): Named placeholders 3 2 1
+2020-05-13 12:37:22,536 - Info     - main.go:38:main.main(): Object placeholders 3 2 1
+```
 
 ## Documentation
 
@@ -84,26 +88,36 @@ part of the [tymonx/docker-go](https://gitlab.com/tymonx/docker-go) project.
 Run the `docker-run` script without any arguments to work in Docker
 container:
 
-`scripts/docker-run`
+```plaintext
+scripts/docker-run
+```
 
 Use the `go-format` script to automatically reformat Go source files:
 
-`scripts/go-format`
+```plaintext
+scripts/go-format
+```
 
 Use the `go-lint` script to run various Go linters on Go source files with
 enabled colorization:
 
-`scripts/go-lint`
+```plaintext
+scripts/go-lint
+```
 
 Use the `go-build` script to build Go source files. Equivalent to
 the `go build ./...` execution:
 
-`scripts/go-build`
+```plaintext
+scripts/go-build
+```
 
 Use the `go-test` script to run tests and validate coverage result with
 enabled colorization:
 
-`scripts/go-test`
+```plaintext
+scripts/go-test
+```
 
 All above scripts accept standard Go paths as additional arguments like
 `./`, `./...`, `<package-name>` and so on.
