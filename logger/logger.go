@@ -12,12 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logger implements logging package. It defines a type, Logger, with
-// methods for formatting output. Each logging operations creates and sends
-// lightweight not formatted log message to separate worker thread. It offloads
-// main code from unnecessary resource consuming formatting and I/O operations.
-// On default it supports many different log handlers like logging to standard
-// output, error output, file, stream or syslog.
 package logger
 
 import (
