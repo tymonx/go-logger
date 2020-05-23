@@ -17,9 +17,11 @@ package logger
 import (
 	"fmt"
 	"io"
-	"os"
 	"sync"
 )
+
+// StreamHandler defines a custom stream handler for writing log records with writer.
+type StreamHandler func(writer io.Writer, record *Record, formatter *Formatter) error
 
 // Opener implements Open method.
 type Opener interface {
@@ -29,7 +31,8 @@ type Opener interface {
 // A Stream represents a log handler object for logging messages using stream
 // object.
 type Stream struct {
-	writer       io.WriteCloser
+	writer       io.Writer
+	closer       io.Closer
 	formatter    *Formatter
 	mutex        sync.RWMutex
 	opener       Opener
@@ -37,6 +40,7 @@ type Stream struct {
 	maximumLevel int
 	reopen       bool
 	isDisabled   bool
+	handler      StreamHandler
 }
 
 // NewStream creates a new Stream log handler object.
@@ -45,6 +49,7 @@ func NewStream() *Stream {
 		formatter:    NewFormatter(),
 		minimumLevel: MinimumLevel,
 		maximumLevel: MaximumLevel,
+		handler:      StreamHandlerDefault,
 	}
 }
 
@@ -68,8 +73,20 @@ func (s *Stream) RUnlock() {
 	s.mutex.RUnlock()
 }
 
+// SetStreamHandler sets custom stream handler.
+func (s *Stream) SetStreamHandler(handler StreamHandler) *Stream {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if handler != nil {
+		s.handler = handler
+	}
+
+	return s
+}
+
 // SetWriter sets new writer to stream.
-func (s *Stream) SetWriter(writer io.WriteCloser) error {
+func (s *Stream) SetWriter(writer io.Writer) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -77,8 +94,8 @@ func (s *Stream) SetWriter(writer io.WriteCloser) error {
 		return nil
 	}
 
-	if s.canClose() {
-		err := s.writer.Close()
+	if s.closer != nil {
+		err := s.closer.Close()
 
 		if err != nil {
 			return NewRuntimeError("cannot close stream", err)
@@ -86,6 +103,30 @@ func (s *Stream) SetWriter(writer io.WriteCloser) error {
 	}
 
 	s.writer = writer
+	s.closer = nil
+
+	return nil
+}
+
+// SetWriteCloser sets new writer and closer to stream.
+func (s *Stream) SetWriteCloser(writeCloser io.WriteCloser) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if (s.writer == writeCloser) && (s.closer == writeCloser) {
+		return nil
+	}
+
+	if s.closer != nil {
+		err := s.closer.Close()
+
+		if err != nil {
+			return NewRuntimeError("cannot close stream", err)
+		}
+	}
+
+	s.writer = writeCloser
+	s.closer = writeCloser
 
 	return nil
 }
@@ -225,20 +266,21 @@ func (s *Stream) Emit(record *Record) error {
 	defer s.mutex.Unlock()
 
 	if s.reopen {
-		if s.canClose() {
-			err := s.writer.Close()
+		if s.closer != nil {
+			err := s.closer.Close()
 
 			if err != nil {
 				return NewRuntimeError("cannot close stream", err)
 			}
 
 			s.writer = nil
+			s.closer = nil
 		}
 
 		s.reopen = false
 	}
 
-	if (s.writer == nil) && (s.opener != nil) {
+	if (s.writer == nil) && (s.closer == nil) && (s.opener != nil) {
 		writer, err := s.opener.Open()
 
 		if err != nil {
@@ -246,18 +288,11 @@ func (s *Stream) Emit(record *Record) error {
 		}
 
 		s.writer = writer
+		s.closer = writer
 	}
 
 	if s.writer != nil {
-		message, err := s.formatter.Format(record)
-
-		if err != nil {
-			return NewRuntimeError("cannot format record", err)
-		}
-
-		_, err = fmt.Fprintln(s.writer, message)
-
-		if err != nil {
+		if err := s.handler(s.writer, record, s.formatter); err != nil {
 			return NewRuntimeError("cannot write to stream", err)
 		}
 	}
@@ -270,19 +305,46 @@ func (s *Stream) Close() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	if s.canClose() {
-		err := s.writer.Close()
+	if s.closer != nil {
+		err := s.closer.Close()
 
 		if err != nil {
 			return NewRuntimeError("cannot close stream", err)
 		}
 
 		s.writer = nil
+		s.closer = nil
 	}
 
 	return nil
 }
 
-func (s *Stream) canClose() bool {
-	return (s.writer != nil) && (s.writer != os.Stdin) && (s.writer != os.Stdout) && (s.writer != os.Stderr)
+// StreamHandlerDefault is a default stream handler for writing log records to stream.
+func StreamHandlerDefault(writer io.Writer, record *Record, formatter *Formatter) error {
+	message, err := formatter.Format(record)
+
+	if err != nil {
+		return NewRuntimeError("cannot format record", err)
+	}
+
+	if _, err := fmt.Fprintln(writer, message); err != nil {
+		return NewRuntimeError("cannot write to stream", err)
+	}
+
+	return nil
+}
+
+// StreamHandlerNDJSON handles writing log records in the NDJSON format.
+func StreamHandlerNDJSON(writer io.Writer, record *Record, _ *Formatter) error {
+	bytes, err := record.ToJSON()
+
+	if err != nil {
+		return NewRuntimeError("cannot format record", err)
+	}
+
+	if _, err := fmt.Fprintln(writer, string(bytes)); err != nil {
+		return NewRuntimeError("cannot write to stream", err)
+	}
+
+	return nil
 }
