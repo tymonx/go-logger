@@ -11,11 +11,13 @@ Lightweight, fast and powerful logger implementation in Go.
 *   Various log methods `Trace`, `Debug`, `Info`, `Notice`, `Warning`, `Error`, `Critical`, `Alert`, `Fatal` and `Panic`
 *   Flexible log message formatter with some predefined named placeholders
 *   Use new created logger instance or use the global one as `logger.*`
+*   Supporting the [NDJSON](http://ndjson.org) output format
 *   Supporting automatic placeholders for log arguments with `{p}`
 *   Supporting positional placeholders for log arguments with `{pN}`
 *   Supporting named placeholders for log arguments with `{name}`, `{p.name}` or `{pN.name}`
 *   Supporting object placeholders for log arguments with `{.Field}`, `{p.Field}` or `{pN.Field}`
 *   Supporting custom placeholder identification (default is `p`)
+*   Supporting custom stream handlers
 *   Supporting custom log handlers
 *   Supporting custom log formatters
 *   Supporting custom log date formats

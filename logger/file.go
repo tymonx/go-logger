@@ -48,6 +48,12 @@ func NewFile() *File {
 	return f
 }
 
+// SetStreamHandler sets custom stream handler.
+func (f *File) SetStreamHandler(handler StreamHandler) *File {
+	f.stream.SetStreamHandler(handler)
+	return f
+}
+
 // Open file.
 func (f *File) Open() (io.WriteCloser, error) {
 	return os.OpenFile(f.name, f.flags, f.mode)
