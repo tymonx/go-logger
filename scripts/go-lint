@@ -14,16 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function get_current_script_dir {
-    echo "$(cd -P -- "$(dirname -- "$(command -v -- "$1")")" >/dev/null 2>&1 && pwd -P)"
-}
+# Exit on error
+set -eo pipefail
 
 # Get current directory location for this script in portable and safe way
-if [[ -n "${BASH_SOURCE:-}" ]]; then
-    SCRIPT_DIR="$(get_current_script_dir "${BASH_SOURCE[0]}")"
-else
-    SCRIPT_DIR="$(get_current_script_dir "$0")"
-fi
+SCRIPT_DIR="$(cd -P -- "$(dirname -- "$(command -v -- "$0")")" >/dev/null 2>&1 && pwd -P)"
 
 # Run docker
 $SCRIPT_DIR/docker-run $(basename "$0") $@
