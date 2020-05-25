@@ -288,6 +288,17 @@ func (l *Logger) AddHandler(name string, handler Handler) *Logger {
 	return l
 }
 
+// SetHandler sets a single log handler for logger. It is equivalent to
+// logger.RemoveHandlers().SetHandlers(logger.Handlers{name: handler}).
+func (l *Logger) SetHandler(name string, handler Handler) *Logger {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	l.handlers = Handlers{name: handler}
+
+	return l
+}
+
 // SetHandlers sets log handlers for logger.
 func (l *Logger) SetHandlers(handlers Handlers) *Logger {
 	l.mutex.Lock()
@@ -393,28 +404,28 @@ func (l *Logger) GetIDGenerator() IDGenerator {
 // thread for further formatting and I/O handling from different added log
 // handlers.
 func (l *Logger) Trace(message string, arguments ...interface{}) {
-	l.logMessage(TraceLevel, TraceName, message, arguments...)
+	l.LogMessage(TraceLevel, TraceName, message, arguments...)
 }
 
 // Debug logs debugging messages. It creates and sends lightweight not formatted
 // log messages to separate running logger thread for further formatting and
 // I/O handling from different added log handlers.
 func (l *Logger) Debug(message string, arguments ...interface{}) {
-	l.logMessage(DebugLevel, DebugName, message, arguments...)
+	l.LogMessage(DebugLevel, DebugName, message, arguments...)
 }
 
 // Info logs informational messages. It creates and sends lightweight not
 // formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different added log handlers.
 func (l *Logger) Info(message string, arguments ...interface{}) {
-	l.logMessage(InfoLevel, InfoName, message, arguments...)
+	l.LogMessage(InfoLevel, InfoName, message, arguments...)
 }
 
 // Notice logs messages for significant conditions. It creates and sends
 // lightweight not formatted log messages to separate running logger thread for
 // further formatting and I/O handling from different added log handlers.
 func (l *Logger) Notice(message string, arguments ...interface{}) {
-	l.logMessage(NoticeLevel, NoticeName, message, arguments...)
+	l.LogMessage(NoticeLevel, NoticeName, message, arguments...)
 }
 
 // Warning logs messages for warning conditions that can be potentially harmful.
@@ -422,28 +433,28 @@ func (l *Logger) Notice(message string, arguments ...interface{}) {
 // running logger thread for further formatting and I/O handling from different
 // added log handlers.
 func (l *Logger) Warning(message string, arguments ...interface{}) {
-	l.logMessage(WarningLevel, WarningName, message, arguments...)
+	l.LogMessage(WarningLevel, WarningName, message, arguments...)
 }
 
 // Error logs messages for error conditions. It creates and sends lightweight
 // not formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different log handlers.
 func (l *Logger) Error(message string, arguments ...interface{}) {
-	l.logMessage(ErrorLevel, ErrorName, message, arguments...)
+	l.LogMessage(ErrorLevel, ErrorName, message, arguments...)
 }
 
 // Critical logs messages for critical conditions. It creates and sends
 // lightweight not formatted log messages to separate running logger thread for
 // further formatting and I/O handling from different added log handlers.
 func (l *Logger) Critical(message string, arguments ...interface{}) {
-	l.logMessage(CriticalLevel, CriticalName, message, arguments...)
+	l.LogMessage(CriticalLevel, CriticalName, message, arguments...)
 }
 
 // Alert logs messages for alert conditions. It creates and sends lightweight
 // not formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different added log handlers.
 func (l *Logger) Alert(message string, arguments ...interface{}) {
-	l.logMessage(AlertLevel, AlertName, message, arguments...)
+	l.LogMessage(AlertLevel, AlertName, message, arguments...)
 }
 
 // Fatal logs messages for fatal conditions. It stops logger worker thread and
@@ -451,7 +462,7 @@ func (l *Logger) Alert(message string, arguments ...interface{}) {
 // lightweight not formatted log messages to separate running logger thread for
 // further formatting and I/O handling from different added log handlers.
 func (l *Logger) Fatal(message string, arguments ...interface{}) {
-	l.logMessage(FatalLevel, FatalName, message, arguments...)
+	l.LogMessage(FatalLevel, FatalName, message, arguments...)
 	Close()
 	os.Exit(l.errorCode) // revive:disable-line
 }
@@ -461,7 +472,7 @@ func (l *Logger) Fatal(message string, arguments ...interface{}) {
 // formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different added log handlers.
 func (l *Logger) Panic(message string, arguments ...interface{}) {
-	l.logMessage(PanicLevel, PanicName, message, arguments...)
+	l.LogMessage(PanicLevel, PanicName, message, arguments...)
 	Close()
 	panic(NewRuntimeError("Panic error", nil))
 }
@@ -471,7 +482,7 @@ func (l *Logger) Panic(message string, arguments ...interface{}) {
 // thread for further formatting and I/O handling from different added log
 // handlers.
 func (l *Logger) Log(level int, levelName, message string, arguments ...interface{}) {
-	l.logMessage(level, levelName, message, arguments...)
+	l.LogMessage(level, levelName, message, arguments...)
 }
 
 // Flush flushes all log messages.
@@ -512,11 +523,11 @@ func (l *Logger) CloseDefer() {
 	}
 }
 
-// logMessage logs message with defined log level value and name. It creates and
+// LogMessage logs message with defined log level value and name. It creates and
 // sends lightweight not formatted log messages to separate running logger
 // thread for further formatting and I/O handling from different added log
-// handlers.
-func (l *Logger) logMessage(level int, levelName, message string, arguments ...interface{}) {
+// handlers. Use this method in custom log wrapper methods.
+func (l *Logger) LogMessage(level int, levelName, message string, arguments ...interface{}) {
 	now := time.Now()
 
 	pc, path, line, _ := runtime.Caller(loggerSkipCall)

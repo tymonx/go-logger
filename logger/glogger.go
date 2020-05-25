@@ -122,6 +122,12 @@ func AddHandler(name string, handler Handler) *Logger {
 	return Get().AddHandler(name, handler)
 }
 
+// SetHandler sets a single log handler for logger. It is equivalent to
+// logger.RemoveHandlers().SetHandlers(logger.Handlers{name: handler}).
+func SetHandler(name string, handler Handler) *Logger {
+	return Get().SetHandler(name, handler)
+}
+
 // SetHandlers sets log handlers for logger.
 func SetHandlers(handlers Handlers) *Logger {
 	return Get().SetHandlers(handlers)
@@ -174,28 +180,28 @@ func GetIDGenerator() IDGenerator {
 // thread for further formatting and I/O handling from different added log
 // handlers.
 func Trace(message string, arguments ...interface{}) {
-	Get().logMessage(TraceLevel, TraceName, message, arguments...)
+	Get().LogMessage(TraceLevel, TraceName, message, arguments...)
 }
 
 // Debug logs debugging messages. It creates and sends lightweight not formatted
 // log messages to separate running logger thread for further formatting and
 // I/O handling from different added log handlers.
 func Debug(message string, arguments ...interface{}) {
-	Get().logMessage(DebugLevel, DebugName, message, arguments...)
+	Get().LogMessage(DebugLevel, DebugName, message, arguments...)
 }
 
 // Info logs informational messages. It creates and sends lightweight not
 // formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different added log handlers.
 func Info(message string, arguments ...interface{}) {
-	Get().logMessage(InfoLevel, InfoName, message, arguments...)
+	Get().LogMessage(InfoLevel, InfoName, message, arguments...)
 }
 
 // Notice logs messages for significant conditions. It creates and sends
 // lightweight not formatted log messages to separate running logger thread for
 // further formatting and I/O handling from different added log handlers.
 func Notice(message string, arguments ...interface{}) {
-	Get().logMessage(NoticeLevel, NoticeName, message, arguments...)
+	Get().LogMessage(NoticeLevel, NoticeName, message, arguments...)
 }
 
 // Warning logs messages for warning conditions that can be potentially harmful.
@@ -203,28 +209,28 @@ func Notice(message string, arguments ...interface{}) {
 // running logger thread for further formatting and I/O handling from different
 // added log handlers.
 func Warning(message string, arguments ...interface{}) {
-	Get().logMessage(WarningLevel, WarningName, message, arguments...)
+	Get().LogMessage(WarningLevel, WarningName, message, arguments...)
 }
 
 // Error logs messages for error conditions. It creates and sends lightweight
 // not formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different added log handlers.
 func Error(message string, arguments ...interface{}) {
-	Get().logMessage(ErrorLevel, ErrorName, message, arguments...)
+	Get().LogMessage(ErrorLevel, ErrorName, message, arguments...)
 }
 
 // Critical logs messages for critical conditions. It creates and sends
 // lightweight not formatted log messages to separate running logger thread for
 // further formatting and I/O handling from different added log handlers.
 func Critical(message string, arguments ...interface{}) {
-	Get().logMessage(CriticalLevel, CriticalName, message, arguments...)
+	Get().LogMessage(CriticalLevel, CriticalName, message, arguments...)
 }
 
 // Alert logs messages for alert conditions. It creates and sends lightweight
 // not formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different added log handlers.
 func Alert(message string, arguments ...interface{}) {
-	Get().logMessage(AlertLevel, AlertName, message, arguments...)
+	Get().LogMessage(AlertLevel, AlertName, message, arguments...)
 }
 
 // Fatal logs messages for fatal conditions. It stops logger worker thread and
@@ -232,7 +238,7 @@ func Alert(message string, arguments ...interface{}) {
 // lightweight not formatted log messages to separate running logger thread for
 // further formatting and I/O handling from different added log handlers.
 func Fatal(message string, arguments ...interface{}) {
-	Get().logMessage(FatalLevel, FatalName, message, arguments...)
+	Get().LogMessage(FatalLevel, FatalName, message, arguments...)
 	Close()
 	os.Exit(Get().GetErrorCode()) // revive:disable-line
 }
@@ -242,7 +248,7 @@ func Fatal(message string, arguments ...interface{}) {
 // formatted log messages to separate running logger thread for further
 // formatting and I/O handling from different added log handlers.
 func Panic(message string, arguments ...interface{}) {
-	Get().logMessage(PanicLevel, PanicName, message, arguments...)
+	Get().LogMessage(PanicLevel, PanicName, message, arguments...)
 	Close()
 	panic(NewRuntimeError("Panic error", nil))
 }
@@ -252,7 +258,7 @@ func Panic(message string, arguments ...interface{}) {
 // thread for further formatting and I/O handling from different added log
 // handlers.
 func Log(level int, levelName, message string, arguments ...interface{}) {
-	Get().logMessage(level, levelName, message, arguments...)
+	Get().LogMessage(level, levelName, message, arguments...)
 }
 
 // Emit emits provided log record to logger worker thread for further

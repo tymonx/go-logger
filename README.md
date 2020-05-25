@@ -121,5 +121,17 @@ enabled colorization:
 scripts/go-test
 ```
 
+Use the `go-test-no-cover` script to run tests without coverage:
+
+```plaintext
+scripts/go-test-no-cover
+```
+
+To run only a single test pass the `-run` option with test name:
+
+```plaintext
+scripts/go-test -run <TestName> ./...
+```
+
 All above scripts accept standard Go paths as additional arguments like
 `./`, `./...`, `<package-name>` and so on.
