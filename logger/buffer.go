@@ -50,6 +50,40 @@ func (b *Buffer) GetBuffer() *bytes.Buffer {
 	return &b.buffer
 }
 
+// Length returns the number of bytes of the unread portion of the buffer.
+func (b *Buffer) Length() int {
+	b.stream.RLock()
+	defer b.stream.RUnlock()
+
+	return b.buffer.Len()
+}
+
+// String returns the contents of the unread portion of the buffer as a string.
+func (b *Buffer) String() string {
+	b.stream.RLock()
+	defer b.stream.RUnlock()
+
+	return b.buffer.String()
+}
+
+// Bytes returns a slice of length b.Length() holding the unread portion of
+// the buffer. The slice is valid for use only until the next buffer
+// modification.
+func (b *Buffer) Bytes() []byte {
+	b.stream.RLock()
+	defer b.stream.RUnlock()
+
+	return b.buffer.Bytes()
+}
+
+// Reset resets the buffer to be empty, but it retains the underlying storage for use by future writes.
+func (b *Buffer) Reset() {
+	b.stream.Lock()
+	defer b.stream.Unlock()
+
+	b.buffer.Reset()
+}
+
 // Enable enables log handler.
 func (b *Buffer) Enable() Handler {
 	return b.stream.Enable()
