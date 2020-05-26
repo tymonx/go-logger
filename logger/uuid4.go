@@ -29,7 +29,7 @@ func NewUUID4() *UUID4 {
 }
 
 // Generate generates new UUID4.
-func (u *UUID4) Generate() (interface{}, error) {
+func (u *UUID4) Generate() (id string, err error) {
 	var uuid [16]byte
 
 	var buffer [36]byte

@@ -16,5 +16,5 @@ package logger
 
 // IDGenerator type that returns generated ID used in log messages.
 type IDGenerator interface {
-	Generate() (id interface{}, err error)
+	Generate() (id string, err error)
 }
