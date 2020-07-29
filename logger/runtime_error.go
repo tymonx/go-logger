@@ -20,8 +20,9 @@ import (
 	"runtime"
 )
 
+// These constants are used for the RuntimeError.
 const (
-	runtimeErrorSkipCall = 2
+	RuntimeErrorSkipCall = 2
 )
 
 // RuntimeError defines runtime error with returned error message, file name,
@@ -36,7 +37,7 @@ type RuntimeError struct {
 
 // NewRuntimeError creates new RuntimeError object.
 func NewRuntimeError(message string, arguments ...interface{}) *RuntimeError {
-	return NewRuntimeErrorBase(runtimeErrorSkipCall, message, arguments...)
+	return NewRuntimeErrorBase(RuntimeErrorSkipCall, message, arguments...)
 }
 
 // NewRuntimeErrorBase creates new RuntimeError object using custom skip call value.
