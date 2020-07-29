@@ -250,7 +250,7 @@ func Fatal(message string, arguments ...interface{}) {
 func Panic(message string, arguments ...interface{}) {
 	Get().LogMessage(PanicLevel, PanicName, message, arguments...)
 	Close()
-	panic(NewRuntimeError("Panic error", nil))
+	panic(NewRuntimeError("Panic error"))
 }
 
 // Log logs messages with user defined log level value and name. It creates and
@@ -277,6 +277,6 @@ func Close() {
 	err := Get().Close()
 
 	if err != nil {
-		printError(NewRuntimeError("cannot close logger", nil))
+		printError(NewRuntimeError("cannot close logger"))
 	}
 }

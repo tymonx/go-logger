@@ -52,6 +52,7 @@ type Formatter struct {
 	formatBuffer  *bytes.Buffer
 	messageBuffer *bytes.Buffer
 	mutex         sync.RWMutex
+	usedArguments map[int]bool
 }
 
 // NewFormatter creates a new Formatter object with default format settings.
@@ -198,57 +199,93 @@ func (f *Formatter) FormatMessage(record *Record) (string, error) {
 // formatMessageUnsafe returns formatted user message string based on provided log
 // record object.
 func (f *Formatter) formatMessageRecord(record *Record) (string, error) {
+	if len(record.Arguments) == 0 {
+		return record.Message, nil
+	}
+
 	var err error
+
+	var object interface{}
 
 	message := record.Message
 
-	if len(record.Arguments) > 0 {
-		var object interface{}
+	f.usedArguments = make(map[int]bool)
 
-		funcMap := make(template.FuncMap)
+	funcMap := make(template.FuncMap)
 
-		funcMap[f.placeholder] = f.argumentAutomatic(record)
+	funcMap[f.placeholder] = f.argumentAutomatic(record)
 
-		for position, argument := range record.Arguments {
-			placeholder := f.placeholder + strconv.Itoa(position)
+	for position, argument := range record.Arguments {
+		placeholder := f.placeholder + strconv.Itoa(position)
 
-			funcMap[placeholder] = f.argumentValue(argument)
+		funcMap[placeholder] = f.argumentValue(position, argument)
 
-			valueOf := reflect.ValueOf(argument)
+		valueOf := reflect.ValueOf(argument)
 
-			switch valueOf.Kind() {
-			case reflect.Map:
-				if reflect.TypeOf(argument).Key().Kind() == reflect.String {
-					for _, key := range valueOf.MapKeys() {
-						funcMap[key.String()] = f.argumentValue(valueOf.MapIndex(key).Interface())
-					}
+		switch valueOf.Kind() {
+		case reflect.Map:
+			if reflect.TypeOf(argument).Key().Kind() == reflect.String {
+				for _, key := range valueOf.MapKeys() {
+					funcMap[key.String()] = f.argumentValue(position, valueOf.MapIndex(key).Interface())
 				}
-			case reflect.Struct:
-				object = argument
 			}
+		case reflect.Struct:
+			object = argument
 		}
-
-		message, err = f.formatString(
-			template.New("").Delims("{", "}").Funcs(f.getRecordFuncs(record)).Funcs(funcMap),
-			f.messageBuffer,
-			message,
-			object,
-		)
 	}
 
-	return message, err
+	if message, err = f.formatString(
+		template.New("").Delims("{", "}").Funcs(f.getRecordFuncs(record)).Funcs(funcMap),
+		f.messageBuffer,
+		message,
+		object,
+	); err != nil {
+		return "", err
+	}
+
+	if len(f.usedArguments) >= len(record.Arguments) {
+		return message, nil
+	}
+
+	for position, argument := range record.Arguments {
+		if !f.isArgumentUsed(position, argument) {
+			if message != "" {
+				message += " "
+			}
+
+			message += fmt.Sprint(argument)
+		}
+	}
+
+	return message, nil
+}
+
+func (f *Formatter) isArgumentUsed(position int, argument interface{}) bool {
+	valueOf := reflect.ValueOf(argument)
+
+	switch valueOf.Kind() {
+	case reflect.Map:
+		if reflect.TypeOf(argument).Key().Kind() == reflect.String {
+			return true
+		}
+	case reflect.Struct:
+		return true
+	}
+
+	return f.usedArguments[position]
 }
 
 // argumentValue returns closure that returns log argument used in log message.
-func (*Formatter) argumentValue(argument interface{}) func() interface{} {
+func (f *Formatter) argumentValue(position int, argument interface{}) func() interface{} {
 	return func() interface{} {
+		f.usedArguments[position] = true
 		return argument
 	}
 }
 
 // argumentAutomatic returns closure that returns log argument from automatic
 // placeholder used in log message.
-func (*Formatter) argumentAutomatic(record *Record) func() interface{} {
+func (f *Formatter) argumentAutomatic(record *Record) func() interface{} {
 	position := 0
 	arguments := len(record.Arguments)
 
@@ -256,6 +293,7 @@ func (*Formatter) argumentAutomatic(record *Record) func() interface{} {
 		var argument interface{}
 
 		if position < arguments {
+			f.usedArguments[position] = true
 			argument = record.Arguments[position]
 			position++
 		}

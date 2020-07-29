@@ -44,6 +44,7 @@ docker run \
     --volume "/tmp/go/:/go/" \
     --volume "/etc/group:/etc/group:ro" \
     --volume "/etc/passwd:/etc/passwd:ro" \
+    --security-opt=label=disable \
     --workdir "$(pwd)" \
     --entrypoint /bin/bash \
     "registry.gitlab.com/tymonx/docker-go:1.14.3" \
