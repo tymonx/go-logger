@@ -317,7 +317,7 @@ func (l *Logger) GetHandler(name string) (Handler, error) {
 	handler, ok := l.handlers[name]
 
 	if !ok {
-		return nil, NewRuntimeError("cannot get handler"+name, nil)
+		return nil, NewRuntimeError("cannot get handler", name)
 	}
 
 	return handler, nil
@@ -474,7 +474,7 @@ func (l *Logger) Fatal(message string, arguments ...interface{}) {
 func (l *Logger) Panic(message string, arguments ...interface{}) {
 	l.LogMessage(PanicLevel, PanicName, message, arguments...)
 	Close()
-	panic(NewRuntimeError("Panic error", nil))
+	panic(NewRuntimeError("Panic error"))
 }
 
 // Log logs messages with user defined log level value and name. It creates and

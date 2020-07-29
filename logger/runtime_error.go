@@ -21,50 +21,68 @@ import (
 )
 
 const (
-	runtimeErrorSkipCall = 1
+	runtimeErrorSkipCall = 2
 )
 
 // RuntimeError defines runtime error with returned error message, file name,
 // file line number and function name.
 type RuntimeError struct {
-	line     int
-	file     string
-	message  string
-	function string
-	err      error
+	line      int
+	file      string
+	message   string
+	function  string
+	arguments []interface{}
 }
 
 // NewRuntimeError creates new RuntimeError object.
-func NewRuntimeError(message string, err error) *RuntimeError {
-	pc, path, line, _ := runtime.Caller(runtimeErrorSkipCall)
+func NewRuntimeError(message string, arguments ...interface{}) *RuntimeError {
+	return NewRuntimeErrorBase(runtimeErrorSkipCall, message, arguments...)
+}
+
+// NewRuntimeErrorBase creates new RuntimeError object using custom skip call value.
+func NewRuntimeErrorBase(skipCall int, message string, arguments ...interface{}) *RuntimeError {
+	pc, path, line, _ := runtime.Caller(skipCall)
 
 	return &RuntimeError{
-		line:     line,
-		file:     filepath.Base(path),
-		message:  message,
-		function: filepath.Base(runtime.FuncForPC(pc).Name()),
-		err:      err,
+		line:      line,
+		file:      filepath.Base(path),
+		message:   message,
+		function:  filepath.Base(runtime.FuncForPC(pc).Name()),
+		arguments: arguments,
 	}
 }
 
 // Error returns formatted error string with message, file name, file line
 // number and function name.
 func (r *RuntimeError) Error() string {
-	message := fmt.Sprintf("%s:%d:%s(): %s",
+	var formatted string
+
+	var err error
+
+	record := &Record{
+		Message:   r.message,
+		Arguments: r.arguments,
+	}
+
+	if formatted, err = NewFormatter().FormatMessage(record); err != nil {
+		formatted = r.message
+	}
+
+	return fmt.Sprintf("%s:%d:%s(): %s",
 		r.file,
 		r.line,
 		r.function,
-		r.message,
+		formatted,
 	)
-
-	if r.err != nil {
-		message = fmt.Sprintf("%s: %v", message, r.err)
-	}
-
-	return message
 }
 
 // Unwrap wrapped error.
 func (r *RuntimeError) Unwrap() error {
-	return r.err
+	for _, argument := range r.arguments {
+		if err, ok := argument.(error); ok {
+			return err
+		}
+	}
+
+	return nil
 }
